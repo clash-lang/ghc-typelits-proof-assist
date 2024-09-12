@@ -1,0 +1,997 @@
+# Repo-specific hlint rules go here:
+- ignore: { name: Use camelCase }
+
+# Relude's .hlint.yaml goes here:
+# https://github.com/kowainik/relude/blob/main/.hlint.yaml
+- arguments:
+      - "-XConstraintKinds"
+      - "-XDeriveGeneric"
+      - "-XGeneralizedNewtypeDeriving"
+      - "-XLambdaCase"
+      - "-XOverloadedStrings"
+      - "-XRecordWildCards"
+      - "-XScopedTypeVariables"
+      - "-XStandaloneDeriving"
+      - "-XTupleSections"
+      - "-XTypeApplications"
+      - "-XViewPatterns"
+- ignore:
+      name: Use head
+- ignore:
+      name: Use Foldable.forM_
+- hint:
+      lhs: "(: [])"
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: "(:| [])"
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Sequence.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Text.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Text.Lazy.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.ByteString.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.ByteString.Lazy.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Map.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Map.Strict.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.HashMap.Strict.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.HashMap.Lazy.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.IntMap.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.IntMap.Strict.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.Set.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.HashSet.singleton
+      note: "Use `one`"
+      rhs: one
+- hint:
+      lhs: Data.IntSet.singleton
+      note: "Use `one`"
+      rhs: one
+- warn:
+      lhs: Control.Exception.evaluate
+      rhs: evaluateWHNF
+- warn:
+      lhs: "Control.Exception.evaluate (force x)"
+      rhs: evaluateNF x
+- warn:
+      lhs: "Control.Exception.evaluate (x `deepseq` ())"
+      rhs: evaluateNF_ x
+- warn:
+      lhs: "void (evaluateWHNF x)"
+      rhs: evaluateWHNF_ x
+- warn:
+      lhs: "void (evaluateNF x)"
+      rhs: evaluateNF_ x
+- hint:
+      lhs: Control.Exception.throw
+      note: "Use 'impureThrow'"
+      rhs: impureThrow
+- warn:
+      lhs: Data.Text.IO.readFile
+      rhs: readFileText
+- warn:
+      lhs: Data.Text.IO.writeFile
+      rhs: writeFileText
+- warn:
+      lhs: Data.Text.IO.appendFile
+      rhs: appendFileText
+- warn:
+      lhs: Data.Text.Lazy.IO.readFile
+      rhs: readFileLText
+- warn:
+      lhs: Data.Text.Lazy.IO.writeFile
+      rhs: writeFileLText
+- warn:
+      lhs: Data.Text.Lazy.IO.appendFile
+      rhs: appendFileLText
+- warn:
+      lhs: Data.ByteString.readFile
+      rhs: readFileBS
+- warn:
+      lhs: Data.ByteString.writeFile
+      rhs: writeFileBS
+- warn:
+      lhs: Data.ByteString.appendFile
+      rhs: appendFileBS
+- warn:
+      lhs: Data.ByteString.Lazy.readFile
+      rhs: readFileLBS
+- warn:
+      lhs: Data.ByteString.Lazy.writeFile
+      rhs: writeFileLBS
+- warn:
+      lhs: Data.ByteString.Lazy.appendFile
+      rhs: appendFileLBS
+- hint:
+      lhs: "foldl' (flip f)"
+      note: "Use 'flipfoldl''"
+      rhs: "flipfoldl' f"
+- warn:
+      lhs: "foldl' (+) 0"
+      rhs: sum
+- warn:
+      lhs: "foldl' (*) 1"
+      rhs: product
+- hint:
+      lhs: "fmap and (sequence s)"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: andM s
+- hint:
+      lhs: "and <$> sequence s"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: andM s
+- hint:
+      lhs: "fmap or (sequence s)"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: orM s
+- hint:
+      lhs: "or <$> sequence s"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: orM s
+- hint:
+      lhs: "fmap and (mapM f s)"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: allM f s
+- hint:
+      lhs: "and <$> mapM f s"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: allM f s
+- hint:
+      lhs: "fmap or (mapM f s)"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: anyM f s
+- hint:
+      lhs: "or <$> mapM f s"
+      note: Applying this hint would mean that some actions that were being executed previously would no longer be executed.
+      rhs: anyM f s
+- warn:
+      lhs: "getAlt (foldMap (Alt . f) xs)"
+      rhs: asumMap xs
+- warn:
+      lhs: "getAlt . foldMap (Alt . f)"
+      rhs: asumMap
+- hint:
+      lhs: "foldr (\\x acc -> f x <|> acc) empty"
+      note: "Use 'asumMap'"
+      rhs: asumMap f
+- hint:
+      lhs: "asum (map f xs)"
+      note: "Use 'asumMap'"
+      rhs: asumMap f xs
+- warn:
+      lhs: "map fst &&& map snd"
+      rhs: unzip
+- hint:
+      lhs: "fmap (fmap f) x"
+      note: "Use '(<<$>>)'"
+      rhs: "f <<$>> x"
+- hint:
+      lhs: "(\\f -> f x) <$> ff"
+      note: Use flap operator
+      rhs: "ff ?? x"
+- hint:
+      lhs: "fmap (\\f -> f x) ff"
+      note: Use flap operator
+      rhs: "ff ?? x"
+- hint:
+      lhs: "fmap ($ x) ff"
+      note: Use flap operator
+      rhs: "ff ?? x"
+- hint:
+      lhs: "($ x) <$> ff"
+      note: Use flap operator
+      rhs: "ff ?? x"
+- warn:
+      lhs: "fmap f (nonEmpty x)"
+      rhs: viaNonEmpty f x
+- warn:
+      lhs: fmap f . nonEmpty
+      rhs: viaNonEmpty f
+- warn:
+      lhs: "f <$> nonEmpty x"
+      rhs: viaNonEmpty f x
+- warn:
+      lhs: partitionEithers . map f
+      rhs: partitionWith f
+- warn:
+      lhs: partitionEithers $ map f x
+      rhs: partitionWith f x
+- warn:
+      lhs: "f >>= guard"
+      rhs: guardM f
+- warn:
+      lhs: guard =<< f
+      rhs: guardM f
+- warn:
+      lhs: forever
+      note: "'forever' is loosely typed and may hide errors"
+      rhs: infinitely
+- warn:
+      lhs: "whenM (not <$> x)"
+      rhs: unlessM x
+- warn:
+      lhs: "unlessM (not <$> x)"
+      rhs: whenM x
+- warn:
+      lhs: "either (const True) (const False)"
+      rhs: isLeft
+- warn:
+      lhs: "either (const False) (const True)"
+      rhs: isRight
+- warn:
+      lhs: "either id (const a)"
+      rhs: fromLeft a
+- warn:
+      lhs: "either (const b) id"
+      rhs: fromRight b
+- warn:
+      lhs: "either Just (const Nothing)"
+      rhs: leftToMaybe
+- warn:
+      lhs: "either (const Nothing) Just"
+      rhs: rightToMaybe
+- warn:
+      lhs: "maybe (Left l) Right"
+      rhs: maybeToRight l
+- warn:
+      lhs: "maybe (Right r) Left"
+      rhs: maybeToLeft r
+- warn:
+      lhs: "case m of Just x -> f x; Nothing -> pure ()"
+      rhs: whenJust m f
+- warn:
+      lhs: "case m of Just x -> f x; Nothing -> return ()"
+      rhs: whenJust m f
+- warn:
+      lhs: "case m of Just x -> f x; Nothing -> pass"
+      rhs: whenJust m f
+- warn:
+      lhs: "case m of Nothing -> pure ()  ; Just x -> f x"
+      rhs: whenJust m f
+- warn:
+      lhs: "case m of Nothing -> return (); Just x -> f x"
+      rhs: whenJust m f
+- warn:
+      lhs: "case m of Nothing -> pass     ; Just x -> f x"
+      rhs: whenJust m f
+- warn:
+      lhs: "maybe (pure ())   f m"
+      rhs: whenJust m f
+- warn:
+      lhs: "maybe (return ()) f m"
+      rhs: whenJust m f
+- warn:
+      lhs: maybe pass        f m
+      rhs: whenJust m f
+- warn:
+      lhs: "m >>= \\a -> whenJust a f"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Just x -> f x; Nothing -> pure ()"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Just x -> f x; Nothing -> return ()"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Just x -> f x; Nothing -> pass"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Nothing -> pure ()  ; Just x -> f x"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Nothing -> return (); Just x -> f x"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= \\case Nothing -> pass     ; Just x -> f x"
+      rhs: whenJustM m f
+- warn:
+      lhs: "maybe (pure ())   f =<< m"
+      rhs: whenJustM m f
+- warn:
+      lhs: "maybe (return ()) f =<< m"
+      rhs: whenJustM m f
+- warn:
+      lhs: maybe pass        f =<< m
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= maybe (pure ())   f"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= maybe (return ()) f"
+      rhs: whenJustM m f
+- warn:
+      lhs: "m >>= maybe pass        f"
+      rhs: whenJustM m f
+- warn:
+      lhs: "case m of Just _ -> pure ()  ; Nothing -> x"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "case m of Just _ -> return (); Nothing -> x"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "case m of Just _ -> pass     ; Nothing -> x"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "case m of Nothing -> x; Just _ -> pure ()"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "case m of Nothing -> x; Just _ -> return ()"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "case m of Nothing -> x; Just _ -> pass"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (\\_ -> pure ()    ) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (\\_ -> return ()  ) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (\\_ -> pass       ) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (const (pure ()  )) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (const (return ())) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "maybe x (const pass) m"
+      rhs: whenNothing_ m x
+- warn:
+      lhs: "m >>= \\a -> whenNothing_ a x"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Just _ -> pure ()  ; Nothing -> x"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Just _ -> return (); Nothing -> x"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Just _ -> pass     ; Nothing -> x"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Nothing -> x; Just _ -> pure ()"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Nothing -> x; Just _ -> return ()"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= \\case Nothing -> x; Just _ -> pass"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (\\_ -> pure ()    ) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (\\_ -> return ()  ) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (\\_ -> pass       ) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (const (pure ()  )) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (const (return ())) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "maybe x (const pass) =<< m"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (\\_ -> pure ())"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (\\_ -> return ())"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (\\_ -> pass)"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (const (pure ())  )"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (const (return ()))"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "m >>= maybe x (const pass)"
+      rhs: whenNothingM_ m x
+- warn:
+      lhs: "whenLeft ()"
+      rhs: whenLeft_
+- warn:
+      lhs: "case m of Left x -> f x; Right _ -> pure ()"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "case m of Left x -> f x; Right _ -> return ()"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "case m of Left x -> f x; Right _ -> pass"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "case m of Right _ -> pure ()  ; Left x -> f x"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "case m of Right _ -> return (); Left x -> f x"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "case m of Right _ -> pass     ; Left x -> f x"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (\\_ -> pure ()    ) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (\\_ -> return ()  ) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (\\_ -> pass       ) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (const (pure ()  )) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (const (return ())) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "either f (const pass) m"
+      rhs: whenLeft_ m f
+- warn:
+      lhs: "m >>= \\a -> whenLeft_ a f"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Left x -> f x; Right _ -> pure ()"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Left x -> f x; Right _ -> return ()"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Left x -> f x; Right _ -> pass"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Right _ -> pure ()  ; Left x -> f x"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Right _ -> return (); Left x -> f x"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= \\case Right _ -> pass     ; Left x -> f x"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (\\_ -> pure ()    ) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (\\_ -> return ()  ) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (\\_ -> pass       ) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (const (pure ()  )) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (const (return ())) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "either f (const pass) =<< m"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (\\_ -> pure ())"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (\\_ -> return ())"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (\\_ -> pass)"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (const (pure ())  )"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (const (return ()))"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "m >>= either f (const pass)"
+      rhs: whenLeftM_ m f
+- warn:
+      lhs: "whenRight ()"
+      rhs: whenRight_
+- warn:
+      lhs: "case m of Right x -> f x; Left _ -> pure ()"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "case m of Right x -> f x; Left _ -> return ()"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "case m of Right x -> f x; Left _ -> pass"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "case m of Left _ -> pure ()  ; Right x -> f x"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "case m of Left _ -> return (); Right x -> f x"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "case m of Left _ -> pass     ; Right x -> f x"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (\\_ -> pure ()    ) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (\\_ -> return ()  ) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (\\_ -> pass       ) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (const (pure ()  )) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (const (return ())) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "either (const pass) f m"
+      rhs: whenRight_ m f
+- warn:
+      lhs: "m >>= \\a -> whenRight_ a f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Right x -> f x; Left _ -> pure ()  "
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Right x -> f x; Left _ -> return ()"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Right x -> f x; Left _ -> pass"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Left _ -> pure ()  ; Right x -> f x"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Left _ -> return (); Right x -> f x"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= \\case Left _ -> pass     ; Right x -> f x"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (\\_ -> pure ()    ) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (\\_ -> return ()  ) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (\\_ -> pass       ) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (const (pure ()  )) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (const (return ())) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "either (const pass) f =<< m"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (\\_ -> pure ())   f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (\\_ -> return ()) f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (\\_ -> pass)      f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (const (pure ())  ) f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (const (return ())) f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "m >>= either (const pass) f"
+      rhs: whenRightM_ m f
+- warn:
+      lhs: "case m of Left x -> f x; Right _ -> pure d  "
+      rhs: whenLeft d m f
+- warn:
+      lhs: "case m of Left x -> f x; Right _ -> return d"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "case m of Right _ -> pure d  ; Left x -> f x"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "case m of Right _ -> return d; Left x -> f x"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "either f (\\_ -> pure d    ) m"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "either f (\\_ -> return d  ) m"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "either f (const (pure d  )) m"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "either f (const (return d)) m"
+      rhs: whenLeft d m f
+- warn:
+      lhs: "m >>= \\a -> whenLeft d a f"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= \\case Left x -> f x; Right _ -> pure d"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= \\case Left x -> f x; Right _ -> return d"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= \\case Right _ -> pure d  ; Left x -> f x"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= \\case Right _ -> return d; Left x -> f x"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "either f (\\_ -> pure d    ) =<< m"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "either f (\\_ -> return d  ) =<< m"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "either f (const (pure d  )) =<< m"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "either f (const (return d)) =<< m"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= either f (\\_ -> pure d)"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= either f (\\_ -> return d)"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= either f (const (pure d))"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "m >>= either f (const (return d))"
+      rhs: whenLeftM d m f
+- warn:
+      lhs: "case m of Right x -> f x; Left _ -> pure d"
+      rhs: whenRight d m f
+- warn:
+      lhs: "case m of Right x -> f x; Left _ -> return d"
+      rhs: whenRight d m f
+- warn:
+      lhs: "case m of Left _ -> pure d  ; Right x -> f x"
+      rhs: whenRight d m f
+- warn:
+      lhs: "case m of Left _ -> return d; Right x -> f x"
+      rhs: whenRight d m f
+- warn:
+      lhs: "either (\\_ -> pure d    ) f m"
+      rhs: whenRight d m f
+- warn:
+      lhs: "either (\\_ -> return d  ) f m"
+      rhs: whenRight d m f
+- warn:
+      lhs: "either (const (pure d  )) f m"
+      rhs: whenRight d m f
+- warn:
+      lhs: "either (const (return d)) f m"
+      rhs: whenRight d m f
+- warn:
+      lhs: "m >>= \\a -> whenRight d a f"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= \\case Right x -> f x; Left _ -> pure d"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= \\case Right x -> f x; Left _ -> return d"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= \\case Left _ -> pure d  ; Right x -> f x"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= \\case Left _ -> return d; Right x -> f x"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "either (\\_ -> pure d    ) f =<< m"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "either (\\_ -> return d  ) f =<< m"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "either (const (pure d  )) f =<< m"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "either (const (return d)) f =<< m"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= either (\\_ -> pure d)   f"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= either (\\_ -> return d) f"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= either (const (pure d)  ) f"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "m >>= either (const (return d)) f"
+      rhs: whenRightM d m f
+- warn:
+      lhs: "case m of [] -> return (); (x:xs) -> f (x :| xs)"
+      rhs: whenNotNull m f
+- warn:
+      lhs: "case m of [] -> pure ()  ; (x:xs) -> f (x :| xs)"
+      rhs: whenNotNull m f
+- warn:
+      lhs: "case m of [] -> pass     ; (x:xs) -> f (x :| xs)"
+      rhs: whenNotNull m f
+- warn:
+      lhs: "case m of (x:xs) -> f (x :| xs); [] -> return ()"
+      rhs: whenNotNull m f
+- warn:
+      lhs: "case m of (x:xs) -> f (x :| xs); [] -> pure ()  "
+      rhs: whenNotNull m f
+- warn:
+      lhs: "case m of (x:xs) -> f (x :| xs); [] -> pass     "
+      rhs: whenNotNull m f
+- warn:
+      lhs: "m >>= \\case [] -> pass     ; (x:xs) -> f (x :| xs)"
+      rhs: whenNotNullM m f
+- warn:
+      lhs: "m >>= \\case [] -> pure ()  ; (x:xs) -> f (x :| xs)"
+      rhs: whenNotNullM m f
+- warn:
+      lhs: "m >>= \\case [] -> return (); (x:xs) -> f (x :| xs)"
+      rhs: whenNotNullM m f
+- warn:
+      lhs: "m >>= \\case (x:xs) -> f (x :| xs); [] -> pass     "
+      rhs: whenNotNullM m f
+- warn:
+      lhs: "m >>= \\case (x:xs) -> f (x :| xs); [] -> pure ()  "
+      rhs: whenNotNullM m f
+- warn:
+      lhs: "m >>= \\case (x:xs) -> f (x :| xs); [] -> return ()"
+      rhs: whenNotNullM m f
+- warn:
+      lhs: mapMaybe leftToMaybe
+      rhs: lefts
+- warn:
+      lhs: mapMaybe rightToMaybe
+      rhs: rights
+- warn:
+      lhs: flip runReaderT
+      rhs: usingReaderT
+- warn:
+      lhs: flip runReader
+      rhs: usingReader
+- warn:
+      lhs: flip runStateT
+      rhs: usingStateT
+- warn:
+      lhs: flip runState
+      rhs: usingState
+- warn:
+      lhs: "fst <$> usingStateT s st"
+      rhs: evaluatingStateT s st
+- warn:
+      lhs: "fst (usingState s st)"
+      rhs: evaluatingState s st
+- warn:
+      lhs: "snd <$> usingStateT s st"
+      rhs: executingStateT s st
+- warn:
+      lhs: "snd (usingState s st)"
+      rhs: executingState s st
+- warn:
+      lhs: "MaybeT (pure m)"
+      rhs: hoistMaybe m
+- warn:
+      lhs: "MaybeT (return m)"
+      rhs: hoistMaybe m
+- warn:
+      lhs: MaybeT . pure
+      rhs: hoistMaybe
+- warn:
+      lhs: MaybeT . return
+      rhs: hoistMaybe
+- warn:
+      lhs: "ExceptT (pure m)"
+      rhs: hoistEither m
+- warn:
+      lhs: "ExceptT (return m)"
+      rhs: hoistEither m
+- warn:
+      lhs: ExceptT . pure
+      rhs: hoistEither
+- warn:
+      lhs: ExceptT . return
+      rhs: hoistEither
+- warn:
+      lhs: fromMaybe mempty
+      rhs: maybeToMonoid
+- warn:
+      lhs: "m ?: mempty"
+      rhs: maybeToMonoid m
+- warn:
+      lhs: "Data.Map.toAscList (Data.Map.fromList x)"
+      rhs: sortWith fst x
+- warn:
+      lhs: "Data.Map.toDescList (Data.Map.fromList x)"
+      rhs: "sortWith (Down . fst) x"
+- warn:
+      lhs: "Data.Set.toList (Data.Set.fromList l)"
+      rhs: sortNub l
+- warn:
+      lhs: "Data.Set.assocs (Data.Set.fromList l)"
+      rhs: sortNub l
+- warn:
+      lhs: "Data.Set.toAscList (Data.Set.fromList l)"
+      rhs: sortNub l
+- warn:
+      lhs: "Data.HashSet.toList (Data.HashSet.fromList l)"
+      rhs: unstableNub l
+- warn:
+      lhs: nub
+      note: "'nub' is O(n^2), 'ordNub' is O(n log n)"
+      rhs: ordNub
+- warn:
+      lhs: "sortBy (comparing f)"
+      note: "If the function you are using for 'comparing' is slow, use 'sortOn' instead of 'sortWith', because 'sortOn' caches applications the function and 'sortWith' doesn't."
+      rhs: sortWith f
+- warn:
+      lhs: sortOn fst
+      note: "'sortWith' will be faster here because it doesn't do caching"
+      rhs: sortWith fst
+- warn:
+      lhs: sortOn snd
+      note: "'sortWith' will be faster here because it doesn't do caching"
+      rhs: sortWith snd
+- warn:
+      lhs: "sortOn (Down . fst)"
+      note: "'sortWith' will be faster here because it doesn't do caching"
+      rhs: "sortWith (Down . fst)"
+- warn:
+      lhs: "sortOn (Down . snd)"
+      note: "'sortWith' will be faster here because it doesn't do caching"
+      rhs: "sortWith (Down . snd)"
+- warn:
+      lhs: Data.Text.IO.putStr
+      rhs: putText
+- warn:
+      lhs: Data.Text.IO.putStrLn
+      rhs: putTextLn
+- warn:
+      lhs: Data.Text.Lazy.IO.putStr
+      rhs: putLText
+- warn:
+      lhs: Data.Text.Lazy.IO.putStrLn
+      rhs: putLTextLn
+- warn:
+      lhs: Data.ByteString.Char8.putStr
+      rhs: putBS
+- warn:
+      lhs: Data.ByteString.Char8.putStrLn
+      rhs: putBSLn
+- warn:
+      lhs: Data.ByteString.Lazy.Char8.putStr
+      rhs: putLBS
+- warn:
+      lhs: Data.ByteString.Lazy.Char8.putStrLn
+      rhs: putLBSLn
+- warn:
+      lhs: Data.Text.Lazy.Text
+      rhs: LText
+- warn:
+      lhs: Data.ByteString.Lazy.ByteString
+      rhs: LByteString
+- warn:
+      lhs: Data.ByteString.UTF8.fromString
+      rhs: encodeUtf8
+- warn:
+      lhs: Data.ByteString.UTF8.toString
+      rhs: decodeUtf8
+- warn:
+      lhs: Data.Text.Encoding.encodeUtf8
+      rhs: encodeUtf8
+- warn:
+      lhs: Data.Text.Encoding.decodeUtf8
+      rhs: decodeUtf8
+- warn:
+      lhs: "Data.ByteString.Lazy.toStrict (encodeUtf8 x)"
+      rhs: encodeUtf8 x
+- warn:
+      lhs: "toStrict (encodeUtf8 x)"
+      rhs: encodeUtf8 x
+- warn:
+      lhs: "decodeUtf8 (Data.ByteString.Lazy.fromStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: "decodeUtf8 (fromStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: Data.ByteString.Lazy.UTF8.fromString
+      rhs: encodeUtf8
+- warn:
+      lhs: Data.ByteString.Lazy.UTF8.toString
+      rhs: decodeUtf8
+- warn:
+      lhs: "Data.ByteString.Lazy.fromStrict (Data.Text.Encoding.encodeUtf8 x)"
+      rhs: encodeUtf8 x
+- warn:
+      lhs: "Data.ByteString.Lazy.fromStrict (encodeUtf8 x)"
+      rhs: encodeUtf8 x
+- warn:
+      lhs: "Data.Text.Encoding.decodeUtf8 (Data.ByteString.Lazy.toStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: "Data.Text.Encoding.decodeUtf8 (toStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: "decodeUtf8 (Data.ByteString.Lazy.toStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: "decodeUtf8 (toStrict x)"
+      rhs: decodeUtf8 x
+- warn:
+      lhs: Data.Text.pack
+      rhs: toText
+- warn:
+      lhs: Data.Text.unpack
+      rhs: toString
+- warn:
+      lhs: Data.Text.Lazy.pack
+      rhs: toLText
+- warn:
+      lhs: Data.Text.Lazy.unpack
+      rhs: toString
+- warn:
+      lhs: Data.Text.Lazy.toStrict
+      rhs: toText
+- warn:
+      lhs: Data.Text.Lazy.fromStrict
+      rhs: toLText
+- warn:
+      lhs: "Data.Text.pack (show x)"
+      rhs: show x
+- warn:
+      lhs: "Data.Text.Lazy.pack (show x)"
+      rhs: show x
+- warn:
+      lhs: Data.ByteString.Lazy.fromStrict
+      rhs: fromStrict
+- warn:
+      lhs: Data.ByteString.Lazy.toStrict
+      rhs: toStrict
