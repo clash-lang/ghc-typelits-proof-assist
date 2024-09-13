@@ -22,24 +22,26 @@ import GHC.Plugins
       unpackFS,
       isNumLitTy,
       text,
-      tyVarName )
+      tyVarName, Type )
 import GHC.Types.Unique.FM (emptyUFM)
-import GHC.TcPluginM.Extra (tracePlugin, lookupModule, lookupName)
+import GHC.TcPluginM.Extra (tracePlugin, lookupModule, lookupName, evByFiat)
 import GHC.Num (Natural, integerToNatural)
 import GHC.Tc.Types.Constraint (EqCt (..), CanEqLHS (..), CtEvidence, ctPred, Ct)
 import GHC.Types.Var (TcTyVar, Var (..))
 import GHC.Types.Name (Name)
 import GHC.Tc.Plugin (tcPluginIO, tcPluginTrace, tcLookupTyCon)
 import GHC.Utils.Outputable (Outputable(..))
-import GHC.Core.Predicate (Pred(..), EqRel (..), classifyPredType)
+import GHC.Core.Predicate (Pred(..), EqRel (..), classifyPredType, getEqPredTys)
 import GHC.Tc.Utils.TcType (getTyVar_maybe)
-import Data.Maybe (catMaybes, mapMaybe, fromMaybe)
+import Data.Maybe (catMaybes, mapMaybe, fromMaybe, isJust)
 import GHC.Utils.Misc (ordNub)
 import Data.List (intercalate, (\\))
 import Description
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import System.Directory (doesFileExist)
 import Data.Aeson (encodeFile)
+import GHC.Data.Maybe (isNothing)
+import GHC.Tc.Types.Evidence (EvTerm)
 
 plugin :: Plugin
 plugin = defaultPlugin { tcPlugin = Just . proverPlugin } -- Currently discarding the arguments.
@@ -93,9 +95,11 @@ proverPluginSolver :: ProverState -> TcPluginSolver
 proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
-    let natEqWanted = mapMaybe (ctToExpr ps) wanted
-        coqWanted   = map natEqToCoq natEqWanted
-        natEqCoq    = zip coqWanted natEqWanted
+    let natEquations  = zip (map (ctToExpr ps) wanted) wanted
+        natEqWanted   = mapMaybe fst natEquations
+        ctWanted      = map snd $ filter (\(e,_) -> isJust e) natEquations
+        coqWanted     = map natEqToCoq natEqWanted
+        natEqCoq      = zip coqWanted natEqWanted
     -- For debugging purposes.
     -- TODO: Add a toggle.
     mapM_ (tcPluginTrace "" . text) coqWanted
@@ -109,9 +113,18 @@ proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wante
         -- tokens = proofTokens ++ tokensToAdd
     let oldExprs  = map proofExpression proofTokens
         newNatEqs = filter (\e -> fst e `notElem` oldExprs) natEqCoq
-    if null newNatEqs then
+    if null newNatEqs then do
       -- If there's no new expression, we'll check out the ones that exist.
-      tcPluginIO $ mapM_ checkProofToken proofTokens
+      tokens <- tcPluginIO $ mapM checkProofToken proofTokens
+      if all isProofValid tokens then do
+        -- Return the proofs with evidence.
+        let evidence = map (evBy . getEqPredTys . ctPred) ctWanted
+        return (TcPluginOk (zip evidence ctWanted) [])
+      else
+        -- If some are invalid, we don't improve the state at all.
+        -- TODO: Is it useful to have better state management here since
+        -- anyway we should only get one thing to prove at a time?
+        return (TcPluginOk [] [])
     else do
       -- If there are new texpressions, we know that it won't work since there's
       -- no proof yet.
@@ -119,8 +132,10 @@ proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wante
       newTokens <- tcPluginIO $ mapM (createProofTokenWithFile . snd) natEqCoq
       let tokens = proofTokens ++ newTokens
       tcPluginIO $ writeIORef proofTokensRef tokens
-      return ()
-    return (TcPluginOk [] [])
+      return (TcPluginOk [] [])
+
+evBy :: (Type, Type) -> EvTerm
+evBy (t1, t2) = evByFiat "External prover" t1 t2
 
 proverPluginRewrite :: ProverState -> UniqFM TyCon TcPluginRewriter
 proverPluginRewrite = const emptyUFM

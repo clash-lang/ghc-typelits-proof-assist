@@ -40,6 +40,12 @@ createProofToken expr = ProofToken
   , proofValidity   = Invalid
   }
 
+isProofValid :: ProofToken -> Bool
+isProofValid (ProofToken { proofValidity = proofValidity }) =
+  case proofValidity of
+    Invalid -> False
+    Valid _ -> True
+
 createProofTokenWithFile :: NatEq -> IO ProofToken
 createProofTokenWithFile natEq = do
   let expr  = natEqToCoq natEq
@@ -102,9 +108,9 @@ data NatExpression =
   | NatLit Natural
   | NatAdd NatExpression NatExpression
   | NatMul NatExpression NatExpression
-  deriving Show
+  deriving (Show, Eq)
 
-data NatEq = NatEq NatExpression NatExpression
+data NatEq = NatEq NatExpression NatExpression deriving Eq
 
 -- * Transforming expression into Coq code.
 
