@@ -22,7 +22,7 @@ import qualified Data.ByteString.Base16 as Base16
 import GHC.Natural (Natural)
 import GHC.Plugins (ordNub)
 
-data ProofValidity = Invalid | Valid T.Text
+data ProofValidity = Invalid | Valid String
   deriving (Show, Generic, FromJSON, ToJSON)
 
 type Expression = String
@@ -76,7 +76,7 @@ runProof token
   | Nothing   <- proofFile token = return Invalid
   | Just path <- proofFile token, validity@(Valid oldHash) <- proofValidity token = do
       proofFile <- BS.readFile path
-      let newHash = T.decodeUtf8 $ SHA256.hash proofFile
+      let newHash = T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
       if oldHash == newHash then
         return validity -- Nothing changed.
       else do
@@ -87,7 +87,7 @@ runProof token
           return Invalid
   | Just path <- proofFile token, Invalid <- proofValidity token = do
       proofFile <- BS.readFile path
-      let newHash = T.decodeUtf8 $ SHA256.hash proofFile
+      let newHash = T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
       coqResult <- callCoq path
       if coqResult then
         return $ Valid newHash

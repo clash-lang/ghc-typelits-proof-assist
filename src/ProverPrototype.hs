@@ -116,6 +116,7 @@ proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wante
     if null newNatEqs then do
       -- If there's no new expression, we'll check out the ones that exist.
       tokens <- tcPluginIO $ mapM checkProofToken proofTokens
+      tcPluginIO $ writeIORef proofTokensRef tokens
       if all isProofValid tokens then do
         -- Return the proofs with evidence.
         let evidence = map (evBy . getEqPredTys . ctPred) ctWanted
