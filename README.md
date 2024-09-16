@@ -74,6 +74,19 @@ Error: cabal: Failed to build exe:coucou from prototype-ghc-prover-0.1.0.0.
 ```
 and generate a corresponding Coq file for the user to specify the proof.
 
+You can copy-and-paste the proof below into `ff885344.v` to prove to GHC that `x + y = y + x`
+
+```coq
+Require Import Coq.Arith.PeanoNat.                
+                                                  
+Lemma ff885344 : forall x y : nat, x + y = y + x. 
+exact Nat.add_comm.                               
+Qed.
+```
+
+The name of the lemma/file is just a hash of the expression we'd like to prove. You can see all of the lemmas and 
+statuses in the generated `description` file.
+
 If ever you want to try the plugin outside the scope of this project, remember
 to call it with the bookkeeping file as argument, e.g. `-fplugin=ProverPrototype
 -fplugin-opt=ProverPrototype:description`.
