@@ -187,6 +187,16 @@ termToExpr ps@(ProverState {..}) k
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatMul e1 e2
+      typeNatExpTyCon -> do
+        let x:[y] = terms
+        e1 <- termToExpr ps x
+        e2 <- termToExpr ps y
+        return $ NatExp e1 e2
+      typeNatSubTyCon -> do
+        let x:[y] = terms
+        e1 <- termToExpr ps x
+        e2 <- termToExpr ps y
+        return $ NatSub e1 e2
   -- A variable name.
   | Just tv <- getTyVar_maybe k =
     do
@@ -205,7 +215,8 @@ ctToExpr ps@(ProverState {..}) ctEv =
     EqPred NomEq t1 t2 -> go t1 t2
     _ -> Nothing
   where
-    go (TyConApp tc xs) _
+    go (TyConApp tc xs) _ -- Discard the second part of the type equality
+      -- Inspired by ghc-typelits-natnormalize.
       | tc == assertTyCon
       -- , tc' == cTupleTyCon 0
       -- , [] <- ys
@@ -224,10 +235,10 @@ ctToExpr ps@(ProverState {..}) ctEv =
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return (NatInEq e1 e2)
-    go t1 t2 = Nothing
-      -- e1 <- termToExpr ps t1
-      -- e2 <- termToExpr ps t2
-      -- return (NatEq e1 e2)
+    go t1 t2 = do
+      e1 <- termToExpr ps t1
+      e2 <- termToExpr ps t2
+      return (NatEq e1 e2)
 
 transformVar :: TcTyVar -> TcPluginM (Maybe NatExpression)
 transformVar v =
