@@ -3,6 +3,7 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module ProverPrototype(plugin) where
 
@@ -26,7 +27,7 @@ import GHC.Plugins
 import GHC.Types.Unique.FM (emptyUFM)
 import GHC.TcPluginM.Extra (tracePlugin, lookupModule, lookupName, evByFiat)
 import GHC.Num (Natural, integerToNatural)
-import GHC.Tc.Types.Constraint (EqCt (..), CanEqLHS (..), CtEvidence, ctPred, Ct)
+import GHC.Tc.Types.Constraint (EqCt (..), CanEqLHS (..), CtEvidence, ctPred, Ct, ctEvidence, ctEvPred)
 import GHC.Types.Var (TcTyVar, Var (..))
 import GHC.Types.Name (Name)
 import GHC.Tc.Plugin (tcPluginIO, tcPluginTrace, tcLookupTyCon, unsafeTcPluginTcM)
@@ -46,6 +47,10 @@ import qualified Language.Haskell.TH as TH
 import GHC.Data.IOEnv (getEnv)
 import qualified GHC.TypeNats
 import qualified GHC.TypeError
+import qualified Data.Type.Ord
+import GHC.Core.TyCo.Rep (Type(..))
+import GHC.Builtin.Types (cTupleTyCon, promotedTrueDataCon, promotedFalseDataCon)
+import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
 
 plugin :: Plugin
 plugin = defaultPlugin { tcPlugin = Just . proverPlugin } -- Currently discarding the arguments.
@@ -64,8 +69,9 @@ proverPlugin args = -- tracePlugin "prototype-ghc-prover"
 
 -- TODO: Unsure I still need these constructors.
 data ProverState = ProverState
-  { natTyCon        :: TyCon
-  , knownNatTyCon   :: TyCon
+  { ordCondTyCon    :: TyCon
+  --   natTyCon        :: TyCon
+  -- , knownNatTyCon   :: TyCon
   , assertTyCon     :: TyCon
   , descriptionFile :: FilePath
   -- ^ The file containing the proof tokens for the expressions.
@@ -75,9 +81,10 @@ data ProverState = ProverState
 proverPluginInit :: [CommandLineOption] -> TcPluginM ProverState
 proverPluginInit args = do
   -- Load the type constructors.
-  natTyC <- lookupTHName ''GHC.TypeNats.Nat >>= tcLookupTyCon
-  kNatTyC <- lookupTHName ''GHC.TypeNats.KnownNat >>= tcLookupTyCon
+  -- natTyC <- lookupTHName ''GHC.TypeNats.Nat >>= tcLookupTyCon
+  -- kNatTyC <- lookupTHName ''GHC.TypeNats.KnownNat >>= tcLookupTyCon
   assertTyC <- lookupTHName ''GHC.TypeError.Assert >>= tcLookupTyCon
+  ordCondTyC <- lookupTHName ''Data.Type.Ord.OrdCond >>= tcLookupTyCon
   -- Load the proof tokens.
   -- TODO: Read from CLI options in a clean way.
   let path:_ = args
@@ -89,7 +96,12 @@ proverPluginInit args = do
     else
       return Nothing
   proofTokens <- tcPluginIO $ newIORef $ fromMaybe [] mProofTokens
-  return $ ProverState natTyC kNatTyC assertTyC path proofTokens
+  return $ ProverState
+    { ordCondTyCon = ordCondTyC
+    , assertTyCon = assertTyC
+    , descriptionFile = path
+    , proofTokens = proofTokens
+    }
 
 -- From ghc-typelits-normalize.
 lookupTHName :: TH.Name -> TcPluginM Name
@@ -99,14 +111,15 @@ lookupTHName th = do
     maybe (fail $ "Failed to lookup " ++ show th) return res
 
 proverPluginSolver :: ProverState -> TcPluginSolver
-proverPluginSolver ps@(ProverState _ _ _ _ proofTokensRef) ev given wanted =
+proverPluginSolver ps ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
-    let natEquations  = zip (map (ctToExpr ps) wanted) wanted
-        natEqWanted   = mapMaybe fst natEquations
-        ctWanted      = map snd $ filter (\(e,_) -> isJust e) natEquations
-        coqWanted     = map natEqToCoq natEqWanted
-        natEqCoq      = zip coqWanted natEqWanted
+    let proofTokensRef = proofTokens ps
+        natEquations   = zip (map (ctToExpr ps) wanted) wanted
+        natEqWanted    = mapMaybe fst natEquations
+        ctWanted       = map snd $ filter (\(e,_) -> isJust e) natEquations
+        coqWanted      = map natEqToCoq natEqWanted
+        natEqCoq       = zip coqWanted natEqWanted
     -- For debugging purposes.
     -- TODO: Add a toggle.
     -- mapM_ (tcPluginTrace "" . text) coqWanted
@@ -154,8 +167,13 @@ proverPluginStop ps = tcPluginIO $ do
   tokens <- readIORef (proofTokens ps)
   encodeFile (descriptionFile ps) tokens
 
+-- These functions try to pattern match on type constructors. As GHC simplifies
+-- expressions using the type equations before we have them, it can get pretty
+-- convoluted. As an example, [`(<=)`](https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html#t:-60--61-)
+-- gets directly transformed to `Assert ...` and that's the type constructor
+-- we'll have to deal with.
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
-termToExpr ps k
+termToExpr ps@(ProverState {..}) k
   -- When we stumble upon a type family (e.g. `+`).
   | Just (tc, terms) <- splitTyConApp_maybe k =
     case tc of
@@ -181,15 +199,35 @@ termToExpr ps k
 
 -- | Transforms an equality into a expression on Nats.
 ctToExpr :: ProverState -> Ct -> Maybe NatEq
-ctToExpr ps ctEv =
-  case classifyPredType (ctPred ctEv) of
+ctToExpr ps@(ProverState {..}) ctEv =
+  case classifyPredType (ctEvPred $ ctEvidence ctEv) of
     -- If it's an equality, we try to translate it.
-    EqPred NomEq t1 t2 ->
-      do
-        e1 <- termToExpr ps t1
-        e2 <- termToExpr ps t2
-        return (NatEq e1 e2)
+    EqPred NomEq t1 t2 -> go t1 t2
     _ -> Nothing
+  where
+    go (TyConApp tc xs) _
+      | tc == assertTyCon
+      -- , tc' == cTupleTyCon 0
+      -- , [] <- ys
+      , [TyConApp ordCondTc zs, _] <- xs
+      , ordCondTc == ordCondTyCon
+      , [_,cmp,lt,eq,gt] <- zs
+      , TyConApp tcCmpNat [x,y] <- cmp
+      , tcCmpNat == typeNatCmpTyCon
+      , TyConApp ltTc [] <- lt
+      , ltTc == promotedTrueDataCon
+      , TyConApp eqTc [] <- eq
+      , eqTc == promotedTrueDataCon
+      , TyConApp gtTc [] <- gt
+      , gtTc == promotedFalseDataCon
+      = do      
+        e1 <- termToExpr ps x
+        e2 <- termToExpr ps y
+        return (NatInEq e1 e2)
+    go t1 t2 = Nothing
+      -- e1 <- termToExpr ps t1
+      -- e2 <- termToExpr ps t2
+      -- return (NatEq e1 e2)
 
 transformVar :: TcTyVar -> TcPluginM (Maybe NatExpression)
 transformVar v =

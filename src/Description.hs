@@ -104,7 +104,10 @@ data NatExpression =
   | NatMul NatExpression NatExpression
   deriving (Show, Eq)
 
-data NatEq = NatEq NatExpression NatExpression deriving Eq
+data NatEq =
+  NatEq NatExpression NatExpression
+  | NatInEq NatExpression NatExpression -- Only <= atm.
+  deriving Eq
 
 -- * Transforming expression into Coq code.
 
@@ -118,6 +121,7 @@ natExprToCoq (NatMul e1 e2) = natExprToCoq e1 ++ " * " ++ natExprToCoq e2
 
 natEqToCoq :: NatEq -> String
 natEqToCoq (NatEq e1 e2) = natExprToCoq e1 ++ " = " ++ natExprToCoq e2
+natEqToCoq (NatInEq e1 e2) = natExprToCoq e1 ++ " <= " ++ natExprToCoq e2
 
 variablesFromNatExpr :: NatExpression -> [NatVariable]
 variablesFromNatExpr (NatVar s) = [s]
@@ -128,6 +132,7 @@ variablesFromNatExpr _ = []
 -- Get the set of variables used in an equivalence over naturals.
 variablesFromNatEq :: NatEq -> [NatVariable]
 variablesFromNatEq (NatEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatEq (NatInEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 
 -- TODO: Rewrite it with a proper string builder
 natEqToCoqLemma :: String -> NatEq -> String
