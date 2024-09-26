@@ -16,7 +16,7 @@
       {
         devShells.default = myHsPkgs.shellFor {
           packages = p: [ p.ghc-typelits-proof-assist ];
-          nativeBuildInputs = with myHsPkgs; [ cabal-install ];
+          nativeBuildInputs = with myHsPkgs; [ cabal-install haskell-language-server ];
         };
       });
 }
