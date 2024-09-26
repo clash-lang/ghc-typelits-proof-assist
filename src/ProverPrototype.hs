@@ -2,10 +2,11 @@
 {-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 
 module ProverPrototype(plugin) where
 
-import GHC.Tc.Types (TcPlugin(..), TcPluginM, TcPluginSolver, TcPluginSolveResult (TcPluginOk), TcPluginRewriter)
+import GHC.Tc.Types (TcPlugin(..), TcPluginM, TcPluginSolver, TcPluginSolveResult (TcPluginOk), TcPluginRewriter, Env (..))
 import GHC.Driver.Plugins
     ( Plugin(..), defaultPlugin, CommandLineOption )
 import GHC.Plugins
@@ -21,14 +22,14 @@ import GHC.Plugins
       unpackFS,
       isNumLitTy,
       text,
-      tyVarName, Type )
+      tyVarName, Type, HscEnv (..), thNameToGhcNameIO )
 import GHC.Types.Unique.FM (emptyUFM)
 import GHC.TcPluginM.Extra (tracePlugin, lookupModule, lookupName, evByFiat)
 import GHC.Num (Natural, integerToNatural)
 import GHC.Tc.Types.Constraint (EqCt (..), CanEqLHS (..), CtEvidence, ctPred, Ct)
 import GHC.Types.Var (TcTyVar, Var (..))
 import GHC.Types.Name (Name)
-import GHC.Tc.Plugin (tcPluginIO, tcPluginTrace, tcLookupTyCon)
+import GHC.Tc.Plugin (tcPluginIO, tcPluginTrace, tcLookupTyCon, unsafeTcPluginTcM)
 import GHC.Utils.Outputable (Outputable(..))
 import GHC.Core.Predicate (Pred(..), EqRel (..), classifyPredType, getEqPredTys)
 import GHC.Tc.Utils.TcType (getTyVar_maybe)
@@ -41,6 +42,10 @@ import System.Directory (doesFileExist)
 import Data.Aeson (encodeFile)
 import GHC.Data.Maybe (isNothing)
 import GHC.Tc.Types.Evidence (EvTerm)
+import qualified Language.Haskell.TH as TH
+import GHC.Data.IOEnv (getEnv)
+import qualified GHC.TypeNats
+import qualified GHC.TypeError
 
 plugin :: Plugin
 plugin = defaultPlugin { tcPlugin = Just . proverPlugin } -- Currently discarding the arguments.
@@ -61,6 +66,7 @@ proverPlugin args = -- tracePlugin "prototype-ghc-prover"
 data ProverState = ProverState
   { natTyCon        :: TyCon
   , knownNatTyCon   :: TyCon
+  , assertTyCon     :: TyCon
   , descriptionFile :: FilePath
   -- ^ The file containing the proof tokens for the expressions.
   , proofTokens     :: IORef [ProofToken]
@@ -69,11 +75,9 @@ data ProverState = ProverState
 proverPluginInit :: [CommandLineOption] -> TcPluginM ProverState
 proverPluginInit args = do
   -- Load the type constructors.
-  md <- lookupModule natModule natPackage
-  natTcNm <- lookupName md (mkTcOcc "Nat")
-  knownNatTcNm <- lookupName md (mkTcOcc "KnownNat")
-  natTyC <- tcLookupTyCon natTcNm
-  knatTyC <- tcLookupTyCon knownNatTcNm
+  natTyC <- lookupTHName ''GHC.TypeNats.Nat >>= tcLookupTyCon
+  kNatTyC <- lookupTHName ''GHC.TypeNats.KnownNat >>= tcLookupTyCon
+  assertTyC <- lookupTHName ''GHC.TypeError.Assert >>= tcLookupTyCon
   -- Load the proof tokens.
   -- TODO: Read from CLI options in a clean way.
   let path:_ = args
@@ -85,13 +89,17 @@ proverPluginInit args = do
     else
       return Nothing
   proofTokens <- tcPluginIO $ newIORef $ fromMaybe [] mProofTokens
-  return $ ProverState natTyC knatTyC path proofTokens
-  where
-    natModule = mkModuleName "GHC.TypeNats"
-    natPackage = fsLit "base"
+  return $ ProverState natTyC kNatTyC assertTyC path proofTokens
+
+-- From ghc-typelits-normalize.
+lookupTHName :: TH.Name -> TcPluginM Name
+lookupTHName th = do
+    nc <- unsafeTcPluginTcM (hsc_NC . env_top <$> getEnv)
+    res <- tcPluginIO $ thNameToGhcNameIO nc th
+    maybe (fail $ "Failed to lookup " ++ show th) return res
 
 proverPluginSolver :: ProverState -> TcPluginSolver
-proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wanted =
+proverPluginSolver ps@(ProverState _ _ _ _ proofTokensRef) ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
     let natEquations  = zip (map (ctToExpr ps) wanted) wanted
@@ -101,7 +109,7 @@ proverPluginSolver ps@(ProverState natTc knatTc _ proofTokensRef) ev given wante
         natEqCoq      = zip coqWanted natEqWanted
     -- For debugging purposes.
     -- TODO: Add a toggle.
-    mapM_ (tcPluginTrace "" . text) coqWanted
+    -- mapM_ (tcPluginTrace "" . text) coqWanted
     mapM_ (tcPluginTrace "" . ppr) given
     mapM_ (tcPluginTrace "" . ppr) wanted
     -- For each expression, if it's not already in the proof state, add it.
@@ -148,7 +156,7 @@ proverPluginStop ps = tcPluginIO $ do
 
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps k
-  -- When we stumble upon a type construction (e.g. `+`).
+  -- When we stumble upon a type family (e.g. `+`).
   | Just (tc, terms) <- splitTyConApp_maybe k =
     case tc of
       typeNatAddTyCon -> do

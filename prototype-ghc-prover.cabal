@@ -90,11 +90,13 @@ library
     , text
     , directory
     , base16-bytestring
+    , template-haskell
 
 executable proofs
   import: shared
   build-depends:
     , prototype-ghc-prover
+    , constraints
   ghc-options:        -fplugin=ProverPrototype -fplugin-opt=ProverPrototype:description
   main-is: Main.hs
   hs-source-dirs: app
