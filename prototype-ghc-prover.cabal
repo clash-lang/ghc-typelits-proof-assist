@@ -1,0 +1,99 @@
+cabal-version:      2.4
+name:               prototype-ghc-prover
+version:            0.1.0.0
+copyright:          2024 QBayLogic
+maintainer:         diego@qbaylogic.com
+author:             Diego Diverio
+category:           Type System
+homepage:
+
+-- TODO: Before hackage release.
+-- A short (one-line) description of the package.
+synopsis:           A prototype for a plugin enabling GHC to communicate with a prover.
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+extra-source-files:
+  LICENSE
+  README.md
+
+common shared
+  ghc-options:
+    -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
+    -Wmissing-deriving-strategies -Wunused-foralls -Wunused-foralls
+    -fprint-explicit-foralls -fprint-explicit-kinds -ddump-tc-trace
+
+  default-extensions:
+    BangPatterns
+    ConstraintKinds
+    DataKinds
+    DeriveDataTypeable
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    EmptyDataDecls
+    EmptyDataDeriving
+    ExistentialQuantification
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    GADTSyntax
+    GeneralisedNewtypeDeriving
+    ImportQualifiedPost
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    NoStarIsType
+    NumericUnderscores
+    OverloadedStrings
+    PolyKinds
+    PostfixOperators
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
+    StandaloneKindSignatures
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    ViewPatterns
+
+  build-depends:
+    , base          >=4.9   && <5
+
+  default-language:   Haskell2010
+
+library
+  exposed-modules:    ProverPrototype
+  other-modules:      Description
+  hs-source-dirs:     src
+  build-depends:
+    , base
+    , ghc-tcplugins-extra
+    , ghc
+    , aeson
+    , time
+    , cryptohash-sha256
+    , bytestring
+    , process
+    , text
+    , directory
+    , base16-bytestring
+
+executable proofs
+  import: shared
+  build-depends:
+    , prototype-ghc-prover
+  ghc-options:        -fplugin=ProverPrototype -fplugin-opt=ProverPrototype:description
+  main-is: Main.hs
+  hs-source-dirs: app
