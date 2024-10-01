@@ -104,6 +104,8 @@ data NatExpression =
   | NatMul NatExpression NatExpression
   | NatExp NatExpression NatExpression
   | NatSub NatExpression NatExpression
+  | NatDiv NatExpression NatExpression
+  | NatMod NatExpression NatExpression
   deriving (Show, Eq)
 
 data NatEq =
@@ -123,6 +125,8 @@ natExprToCoq (NatMul e1 e2) = "(" ++ natExprToCoq e1 ++ " * " ++ natExprToCoq e2
 -- TODO: This is contingent on "Require Import Nat.".
 natExprToCoq (NatExp e1 e2) = "(" ++ natExprToCoq e1 ++ " ^ " ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatSub e1 e2) = "(" ++ natExprToCoq e1 ++ " - " ++ natExprToCoq e2 ++ ")"
+natExprToCoq (NatDiv e1 e2) = "(" ++ natExprToCoq e1 ++ " / " ++ natExprToCoq e2 ++ ")"
+natExprToCoq (NatMod e1 e2) = "(" ++ natExprToCoq e1 ++ " % " ++ natExprToCoq e2 ++ ")"
 
 natEqToCoq :: NatEq -> String
 natEqToCoq (NatEq e1 e2) = natExprToCoq e1 ++ " = " ++ natExprToCoq e2
@@ -135,6 +139,8 @@ variablesFromNatExpr (NatAdd e1 e2) = variablesFromNatExpr e1 ++ variablesFromNa
 variablesFromNatExpr (NatMul e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 variablesFromNatExpr (NatExp e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 variablesFromNatExpr (NatSub e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatDiv e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatMod e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 variablesFromNatExpr _ = []
 
 -- Get the set of variables used in an equivalence over naturals.

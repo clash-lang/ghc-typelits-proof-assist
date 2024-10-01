@@ -197,6 +197,16 @@ termToExpr ps@(ProverState {..}) k
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatSub e1 e2
+      typeNatDivTyCon -> do
+        let x:[y] = terms
+        e1 <- termToExpr ps x
+        e2 <- termToExpr ps y
+        return $ NatDiv e1 e2
+      typeNatModTyCon -> do
+        let x:[y] = terms
+        e1 <- termToExpr ps x
+        e2 <- termToExpr ps y
+        return $ NatMod e1 e2
   -- A variable name.
   | Just tv <- getTyVar_maybe k =
     do
