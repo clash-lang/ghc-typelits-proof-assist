@@ -44,10 +44,13 @@ isProofValid (ProofToken { proofValidity = proofValidity }) =
     Invalid -> False
     Valid _ -> True
 
+computeHash :: BS.ByteString -> String
+computeHash = T.unpack . T.decodeASCII . Base16.encode . SHA256.hash
+
 createProofTokenWithFile :: NatEq -> IO ProofToken
 createProofTokenWithFile natEq = do
   let expr  = natEqToCoq natEq
-      title = drop 56 $ T.unpack $ T.decodeASCII (Base16.encode $ SHA256.hash $ T.encodeUtf8 $ T.pack expr)
+      title = drop 56 $ computeHash $ T.encodeUtf8 $ T.pack expr
       lemma = natEqToCoqLemma title natEq
       file  = title ++ ".v"
       token = (createProofToken expr) { proofFile = Just file }
@@ -68,7 +71,7 @@ callCoq path = do
 computeHashFromFile :: FilePath -> IO String
 computeHashFromFile path = do
   proofFile <- BS.readFile path
-  return $ T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
+  return $ computeHash proofFile
 
 runProof :: ProofToken -> IO ProofValidity
 runProof token
