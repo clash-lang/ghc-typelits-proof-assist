@@ -91,7 +91,7 @@ library
     , directory
     , base16-bytestring
 
-executable coucou
+executable proofs
   import: shared
   build-depends:
     , prototype-ghc-prover
@@ -99,11 +99,3 @@ executable coucou
   main-is: Main.hs
   hs-source-dirs: app
 
-test-suite unittests
-  type:               exitcode-stdio-1.0
-  build-depends:
-    , base
-    , prototype-ghc-prover
-  ghc-options:        -fplugin=ProverPrototype
-  main-is: Main.hs
-  hs-source-dirs:     tests

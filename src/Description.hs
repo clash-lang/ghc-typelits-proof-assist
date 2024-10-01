@@ -3,10 +3,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use readFileBS" #-}
-{-# HLINT ignore "Use alternative" #-}
-{-# HLINT ignore "Use toText" #-}
-{-# HLINT ignore "Use toString" #-}
+
 module Description where
 
 import Data.Aeson
@@ -21,6 +18,7 @@ import System.Process (readProcessWithExitCode)
 import qualified Data.ByteString.Base16 as Base16
 import GHC.Natural (Natural)
 import GHC.Plugins (ordNub)
+import Data.Bool (bool)
 
 data ProofValidity = Invalid | Valid String
   deriving (Show, Generic, FromJSON, ToJSON)
@@ -65,34 +63,27 @@ callCoq path = do
   -- TODO: Manage Coq's output to present it to the user.
   -- Ignore stdout and stderr.
   (exitCode, _, _) <- readProcessWithExitCode "coqc" [path] ""
-  if exitCode == ExitSuccess then
-    return True
-  else
-    return False
+  return $ exitCode == ExitSuccess
 
--- TODO: Refactor this function.
+computeHashFromFile :: FilePath -> IO String
+computeHashFromFile path = do
+  proofFile <- BS.readFile path
+  return $ T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
+
 runProof :: ProofToken -> IO ProofValidity
 runProof token
   | Nothing   <- proofFile token = return Invalid
   | Just path <- proofFile token, validity@(Valid oldHash) <- proofValidity token = do
-      proofFile <- BS.readFile path
-      let newHash = T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
+      newHash <- computeHashFromFile path
       if oldHash == newHash then
         return validity -- Nothing changed.
       else do
         coqResult <- callCoq path
-        if coqResult then
-          return $ Valid newHash
-        else
-          return Invalid
+        return $ bool Invalid (Valid newHash) coqResult
   | Just path <- proofFile token, Invalid <- proofValidity token = do
-      proofFile <- BS.readFile path
-      let newHash = T.unpack $ T.decodeASCII $ Base16.encode $ SHA256.hash proofFile
+      newHash <- computeHashFromFile path
       coqResult <- callCoq path
-      if coqResult then
-        return $ Valid newHash
-      else
-        return Invalid
+      return $ bool Invalid (Valid newHash) coqResult
 
 checkProofToken :: ProofToken -> IO ProofToken
 checkProofToken token = do

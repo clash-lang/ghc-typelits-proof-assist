@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
 {-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
