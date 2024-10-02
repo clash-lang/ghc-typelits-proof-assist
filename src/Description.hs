@@ -26,16 +26,18 @@ data ProofValidity = Invalid | Valid String
 type Expression = String
 
 data ProofToken = ProofToken
-  { proofExpression :: Expression
-  , proofFile       :: Maybe FilePath
-  , proofValidity   :: ProofValidity
+  { proofExpressionGiven  :: [Expression]
+  , proofExpressionWanted :: Expression
+  , proofFile             :: Maybe FilePath
+  , proofValidity         :: ProofValidity
   } deriving (Generic, Show, FromJSON, ToJSON)
 
-createProofToken :: Expression -> ProofToken
-createProofToken expr = ProofToken
-  { proofExpression = expr
-  , proofFile       = Nothing
-  , proofValidity   = Invalid
+createProofToken :: [Expression] -> Expression -> ProofToken
+createProofToken gExprs wExpr = ProofToken
+  { proofExpressionGiven  = gExprs
+  , proofExpressionWanted = wExpr
+  , proofFile             = Nothing
+  , proofValidity         = Invalid
   }
 
 isProofValid :: ProofToken -> Bool
@@ -47,13 +49,16 @@ isProofValid (ProofToken { proofValidity = proofValidity }) =
 computeHash :: BS.ByteString -> String
 computeHash = T.unpack . T.decodeASCII . Base16.encode . SHA256.hash
 
-createProofTokenWithFile :: NatEq -> IO ProofToken
-createProofTokenWithFile natEq = do
-  let expr  = natEqToCoq natEq
-      title = drop 56 $ computeHash $ T.encodeUtf8 $ T.pack expr
-      lemma = natEqToCoqLemma title natEq
+createProofTokenWithFile :: [NatEq] -> NatEq -> IO ProofToken
+createProofTokenWithFile givenNatEqs wantedNatEq = do
+  let wExpr  = natEqToCoq wantedNatEq
+      gExprs = map natEqToCoq givenNatEqs
+      -- We keep only 8 bytes from the hash for the name of the lemma.
+      -- TODO: Find the best way to manage hashes.
+      title = drop 56 $ computeHash $ T.encodeUtf8 $ T.pack $ wExpr ++ concat gExprs
+      lemma = natEqToCoqLemma title givenNatEqs wantedNatEq
       file  = title ++ ".v"
-      token = (createProofToken expr) { proofFile = Just file }
+      token = (createProofToken gExprs wExpr) { proofFile = Just file }
   writeFile file lemma
   return token
 
@@ -115,7 +120,7 @@ data NatEq =
   deriving Eq
 
 -- * Transforming expression into Coq code.
-
+-- TODO: Make the architecture more modular, to incorporate other provers as well.
 
 -- Takes a NatExpression and transforms it into a Coq expression.
 natExprToCoq :: NatExpression -> String
@@ -152,9 +157,13 @@ variablesFromNatEq (NatEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variables
 variablesFromNatEq (NatInEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 
 -- TODO: Rewrite it with a proper string builder
-natEqToCoqLemma :: String -> NatEq -> String
-natEqToCoqLemma title natEq =
-  "Lemma " ++ title ++ " : forall " ++ unwords vars ++ " : nat, " ++ expr ++ "." ++ "\nauto.\nQed."
-  where vars = variablesFromNatEq natEq
-        expr = natEqToCoq natEq
+natEqToCoqLemma :: String -> [NatEq] -> NatEq -> String
+natEqToCoqLemma title givenNatEqs wantedNatEq =
+  "Lemma " ++ title ++ " : forall " ++ unwords vars ++ " : nat, "
+  ++ concatMap givenNatEqToCoq givenNatEqs
+  ++ wExpr ++ "." ++ "\nauto.\nQed."
+  where vars = variablesFromNatEq wantedNatEq
+        wExpr = natEqToCoq wantedNatEq
 
+givenNatEqToCoq :: NatEq -> String
+givenNatEqToCoq givenNatEq = natEqToCoq givenNatEq ++ " -> "

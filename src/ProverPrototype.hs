@@ -117,32 +117,37 @@ proverPluginSolver ps ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
     let proofTokensRef = proofTokens ps
-        natEquations   = zip (map (ctToExpr ps) wanted) wanted
-        natEqWanted    = mapMaybe fst natEquations
-        ctWanted       = map snd $ filter (\(e,_) -> isJust e) natEquations
-        coqWanted      = map natEqToCoq natEqWanted
-        natEqCoq       = zip coqWanted natEqWanted
+        -- We generate equations for wanted proofs.
+        wNatEquations  = zip (map (ctToExpr ps) wanted) wanted
+        wNatEquations' = mapMaybe fst wNatEquations
+        wCt            = map snd $ filter (\(e,_) -> isJust e) wNatEquations
+        wProver        = map natEqToCoq wNatEquations'
+        wNatEqProver   = zip wProver wNatEquations'
+        -- We generate equations for given proofs too.
+        gNatEquations  = zip (map (ctToExpr ps) given) given
+        gNatEquations' = mapMaybe fst gNatEquations
+        gCt            = map snd $ filter (\(e,_) -> isJust e) gNatEquations
+        gProver        = map natEqToCoq gNatEquations'
+        gNatEqProver   = zip gProver gNatEquations'
     -- For debugging purposes.
-    -- TODO: Add a toggle.
-    -- mapM_ (tcPluginTrace "" . text) coqWanted
-    mapM_ (tcPluginTrace "" . ppr) given
-    mapM_ (tcPluginTrace "" . ppr) wanted
+    -- TODO: Add a toggle for debugging.
+    -- mapM_ (tcPluginTrace "" . text) gProver
+    -- mapM_ (tcPluginTrace "" . text) wProver
+    -- mapM_ (tcPluginTrace "" . ppr) given
+    -- mapM_ (tcPluginTrace "" . ppr) wanted
     -- For each expression, if it's not already in the proof state, add it.
     proofTokens <- tcPluginIO $ readIORef proofTokensRef
-    -- let expsWanted = coqWanted
-    --     expsToAdd  = expsWanted \\ map proofExpression proofTokens
-        -- tokensToAdd = map createProofTokenWithFile 
-        -- tokens = proofTokens ++ tokensToAdd
-    let oldExprs  = map proofExpression proofTokens
-        newNatEqs = filter (\e -> fst e `notElem` oldExprs) natEqCoq
-    if null newNatEqs then do
+    let oldExprs   = map proofExpressionWanted proofTokens
+        gNewNatEqs = filter (\e -> fst e `notElem` oldExprs) gNatEqProver
+        wNewNatEqs = filter (\e -> fst e `notElem` oldExprs) wNatEqProver
+    if null wNewNatEqs then do
       -- If there's no new expression, we'll check out the ones that exist.
       tokens <- tcPluginIO $ mapM checkProofToken proofTokens
       tcPluginIO $ writeIORef proofTokensRef tokens
       if all isProofValid tokens then do
         -- Return the proofs with evidence.
-        let evidence = map (evBy . getEqPredTys . ctPred) ctWanted
-        return (TcPluginOk (zip evidence ctWanted) [])
+        let evidence = map (evBy . getEqPredTys . ctPred) wCt
+        return (TcPluginOk (zip evidence wCt) [])
       else
         -- If some are invalid, we don't improve the state at all.
         -- TODO: Is it useful to have better state management here since
@@ -152,7 +157,7 @@ proverPluginSolver ps ev given wanted =
       -- If there are new texpressions, we know that it won't work since there's
       -- no proof yet.
       -- For every new token, we have to create the associated new file.
-      newTokens <- tcPluginIO $ mapM (createProofTokenWithFile . snd) natEqCoq
+      newTokens <- tcPluginIO $ mapM (createProofTokenWithFile (map snd gNatEqProver) . snd) wNatEqProver
       let tokens = proofTokens ++ newTokens
       tcPluginIO $ writeIORef proofTokensRef tokens
       return (TcPluginOk [] [])
@@ -181,7 +186,7 @@ opToConstructor = [(typeNatAddTyCon, NatAdd), (typeNatMulTyCon, NatMul), (typeNa
 
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps@(ProverState {..}) k
-  -- When we stumble upon a type family (e.g. `+`).
+  -- When we stumble upon a type family (e.g. `+`) application.
   | Just (tc, terms) <- splitTyConApp_maybe k =
       let op = lookup tc opToConstructor in
         case op of
