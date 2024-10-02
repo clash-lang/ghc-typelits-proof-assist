@@ -4,6 +4,8 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE BlockArguments #-}
 
 module ProverPrototype(plugin) where
 
@@ -11,7 +13,7 @@ import GHC.Tc.Types (TcPlugin(..), TcPluginM, TcPluginSolver, TcPluginSolveResul
 import GHC.Driver.Plugins
     ( Plugin(..), defaultPlugin, CommandLineOption )
 import GHC.Plugins
-    ( TyCon,
+    ( TyCon (..),
       UniqFM,
       NamedThing(..),
       mkModuleName,
@@ -23,7 +25,7 @@ import GHC.Plugins
       unpackFS,
       isNumLitTy,
       text,
-      tyVarName, Type, HscEnv (..), thNameToGhcNameIO )
+      tyVarName, Type, HscEnv (..), thNameToGhcNameIO, namePun_maybe )
 import GHC.Types.Unique.FM (emptyUFM)
 import GHC.TcPluginM.Extra (tracePlugin, lookupModule, lookupName, evByFiat)
 import GHC.Num (Natural, integerToNatural)
@@ -34,7 +36,7 @@ import GHC.Tc.Plugin (tcPluginIO, tcPluginTrace, tcLookupTyCon, unsafeTcPluginTc
 import GHC.Utils.Outputable (Outputable(..))
 import GHC.Core.Predicate (Pred(..), EqRel (..), classifyPredType, getEqPredTys)
 import GHC.Tc.Utils.TcType (getTyVar_maybe)
-import Data.Maybe (catMaybes, mapMaybe, fromMaybe, isJust)
+import Data.Maybe (catMaybes, mapMaybe, fromMaybe, isJust, fromJust)
 import GHC.Utils.Misc (ordNub)
 import Data.List (intercalate, (\\))
 import Description
@@ -50,7 +52,7 @@ import qualified GHC.TypeError
 import qualified Data.Type.Ord
 import GHC.Core.TyCo.Rep (Type(..))
 import GHC.Builtin.Types (cTupleTyCon, promotedTrueDataCon, promotedFalseDataCon)
-import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
+import GHC.Builtin.Types.Literals (typeNatCmpTyCon, typeNatAddTyCon, typeNatMulTyCon, typeNatExpTyCon, typeNatSubTyCon, typeNatDivTyCon, typeNatModTyCon)
 
 plugin :: Plugin
 plugin = defaultPlugin { tcPlugin = Just . proverPlugin } -- Currently discarding the arguments.
@@ -175,38 +177,44 @@ proverPluginStop ps = tcPluginIO $ do
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps@(ProverState {..}) k
   -- When we stumble upon a type family (e.g. `+`).
-  | Just (tc, terms) <- splitTyConApp_maybe k =
-    case tc of
-      typeNatAddTyCon -> do
+  | Just (tc, terms) <- splitTyConApp_maybe k = (\tc -> if
+      | tc == typeNatAddTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatAdd e1 e2
-      typeNatMulTyCon -> do
+      | tc == typeNatMulTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatMul e1 e2
-      typeNatExpTyCon -> do
+      | tc == typeNatExpTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatExp e1 e2
-      typeNatSubTyCon -> do
+      | tc == typeNatSubTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatSub e1 e2
-      typeNatDivTyCon -> do
+      | tc == typeNatDivTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatDiv e1 e2
-      typeNatModTyCon -> do
+      | tc == typeNatModTyCon -> do
         let x:[y] = terms
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return $ NatMod e1 e2
+      -- If it's a constructor we don't know yet.
+      | otherwise -> do
+        let exprs = mapMaybe (termToExpr ps) terms
+            arity = length terms
+            name  = tyConName tc
+        return $ NatCon (unpackFS $ getOccFS name) exprs
+        ) tc
   -- A variable name.
   | Just tv <- getTyVar_maybe k =
     do
@@ -222,10 +230,11 @@ ctToExpr :: ProverState -> Ct -> Maybe NatEq
 ctToExpr ps@(ProverState {..}) ctEv =
   case classifyPredType (ctEvPred $ ctEvidence ctEv) of
     -- If it's an equality, we try to translate it.
-    EqPred NomEq t1 t2 -> go t1 t2
+    EqPred NomEq t1 t2 -> go2 t1 t2
+    IrredPred pt -> go pt
     _ -> Nothing
   where
-    go (TyConApp tc xs) _ -- Discard the second part of the type equality
+    go (TyConApp tc xs) -- Discard the second part of the type equality
       -- Inspired by ghc-typelits-natnormalize.
       | tc == assertTyCon
       -- , tc' == cTupleTyCon 0
@@ -245,7 +254,8 @@ ctToExpr ps@(ProverState {..}) ctEv =
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return (NatInEq e1 e2)
-    go t1 t2 = do
+    go2 tca@(TyConApp tc xs) _ = go tca
+    go2 t1 t2 = do
       e1 <- termToExpr ps t1
       e2 <- termToExpr ps t2
       return (NatEq e1 e2)

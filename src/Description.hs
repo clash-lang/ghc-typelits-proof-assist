@@ -106,6 +106,7 @@ data NatExpression =
   | NatSub NatExpression NatExpression
   | NatDiv NatExpression NatExpression
   | NatMod NatExpression NatExpression
+  | NatCon String [NatExpression]
   deriving (Show, Eq)
 
 data NatEq =
@@ -127,6 +128,7 @@ natExprToCoq (NatExp e1 e2) = "(" ++ natExprToCoq e1 ++ " ^ " ++ natExprToCoq e2
 natExprToCoq (NatSub e1 e2) = "(" ++ natExprToCoq e1 ++ " - " ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatDiv e1 e2) = "(" ++ natExprToCoq e1 ++ " / " ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatMod e1 e2) = "(" ++ natExprToCoq e1 ++ " % " ++ natExprToCoq e2 ++ ")"
+natExprToCoq (NatCon name exps) = "(" ++ name ++ concatMap (\e -> " " ++ natExprToCoq e) exps ++ ")"
 
 natEqToCoq :: NatEq -> String
 natEqToCoq (NatEq e1 e2) = natExprToCoq e1 ++ " = " ++ natExprToCoq e2
@@ -135,12 +137,13 @@ natEqToCoq (NatInEq e1 e2) = natExprToCoq e1 ++ " <= " ++ natExprToCoq e2
 -- TODO: We might as well get the variables from the available skolems.
 variablesFromNatExpr :: NatExpression -> [NatVariable]
 variablesFromNatExpr (NatVar s) = [s]
-variablesFromNatExpr (NatAdd e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatMul e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatExp e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatSub e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatDiv e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatMod e1 e2) = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatAdd e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatMul e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatExp e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatSub e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatDiv e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatMod e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatCon _ exps) = concatMap variablesFromNatExpr exps
 variablesFromNatExpr _ = []
 
 -- Get the set of variables used in an equivalence over naturals.
