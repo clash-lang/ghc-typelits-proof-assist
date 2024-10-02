@@ -10,3 +10,7 @@ result-*
 
 # direnv
 .direnv
+
+# Coq artifacts
+*.aux
+*.glob
