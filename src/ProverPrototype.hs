@@ -174,47 +174,27 @@ proverPluginStop ps = tcPluginIO $ do
 -- convoluted. As an example, [`(<=)`](https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html#t:-60--61-)
 -- gets directly transformed to `Assert ...` and that's the type constructor
 -- we'll have to deal with.
+
+opToConstructor :: [(TyCon, NatExpression -> NatExpression -> NatExpression)]
+opToConstructor = [(typeNatAddTyCon, NatAdd), (typeNatMulTyCon, NatMul), (typeNatDivTyCon, NatDiv),
+                   (typeNatExpTyCon, NatExp), (typeNatSubTyCon, NatSub), (typeNatModTyCon, NatMod)]
+
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps@(ProverState {..}) k
   -- When we stumble upon a type family (e.g. `+`).
-  | Just (tc, terms) <- splitTyConApp_maybe k = (\tc -> if
-      | tc == typeNatAddTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatAdd e1 e2
-      | tc == typeNatMulTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatMul e1 e2
-      | tc == typeNatExpTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatExp e1 e2
-      | tc == typeNatSubTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatSub e1 e2
-      | tc == typeNatDivTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatDiv e1 e2
-      | tc == typeNatModTyCon -> do
-        let x:[y] = terms
-        e1 <- termToExpr ps x
-        e2 <- termToExpr ps y
-        return $ NatMod e1 e2
-      -- If it's a constructor we don't know yet.
-      | otherwise -> do
-        let exprs = mapMaybe (termToExpr ps) terms
-            arity = length terms
-            name  = tyConName tc
-        return $ NatCon (unpackFS $ getOccFS name) exprs
-        ) tc
+  | Just (tc, terms) <- splitTyConApp_maybe k =
+      let op = lookup tc opToConstructor in
+        case op of
+          Just op -> do -- If it's a binary operator we know.
+            let x:[y] = terms
+            e1 <- termToExpr ps x
+            e2 <- termToExpr ps y
+            return $ op e1 e2
+          Nothing -> do
+            let exprs = mapMaybe (termToExpr ps) terms
+                arity = length terms
+                name  = tyConName tc
+            return $ NatCon (unpackFS $ getOccFS name) exprs
   -- A variable name.
   | Just tv <- getTyVar_maybe k =
     do
