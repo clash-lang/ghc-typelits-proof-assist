@@ -53,6 +53,7 @@ import qualified Data.Type.Ord
 import GHC.Core.TyCo.Rep (Type(..))
 import GHC.Builtin.Types (cTupleTyCon, promotedTrueDataCon, promotedFalseDataCon)
 import GHC.Builtin.Types.Literals (typeNatCmpTyCon, typeNatAddTyCon, typeNatMulTyCon, typeNatExpTyCon, typeNatSubTyCon, typeNatDivTyCon, typeNatModTyCon)
+import Control.Monad (when)
 
 plugin :: Plugin
 plugin = defaultPlugin { tcPlugin = Just . proverPlugin } -- Currently discarding the arguments.
@@ -72,23 +73,21 @@ proverPlugin args = -- tracePlugin "prototype-ghc-prover"
 -- TODO: Unsure I still need these constructors.
 data ProverState = ProverState
   { ordCondTyCon    :: TyCon
-  --   natTyCon        :: TyCon
-  -- , knownNatTyCon   :: TyCon
   , assertTyCon     :: TyCon
   , descriptionFile :: FilePath
   -- ^ The file containing the proof tokens for the expressions.
   , proofTokens     :: IORef [ProofToken]
+  , debugMode       :: Bool
   }
 
 proverPluginInit :: [CommandLineOption] -> TcPluginM ProverState
 proverPluginInit args = do
   -- Load the type constructors.
-  -- natTyC <- lookupTHName ''GHC.TypeNats.Nat >>= tcLookupTyCon
-  -- kNatTyC <- lookupTHName ''GHC.TypeNats.KnownNat >>= tcLookupTyCon
   assertTyC <- lookupTHName ''GHC.TypeError.Assert >>= tcLookupTyCon
   ordCondTyC <- lookupTHName ''Data.Type.Ord.OrdCond >>= tcLookupTyCon
   -- Load the proof tokens.
   -- TODO: Read from CLI options in a clean way.
+  -- TODO: Read debug mode option from CLI options.
   let path:_ = args
   -- TODO: Add some error management of sorts.
   fileExists <- tcPluginIO $ doesFileExist path
@@ -99,10 +98,11 @@ proverPluginInit args = do
       return Nothing
   proofTokens <- tcPluginIO $ newIORef $ fromMaybe [] mProofTokens
   return $ ProverState
-    { ordCondTyCon = ordCondTyC
-    , assertTyCon = assertTyC
+    { ordCondTyCon    = ordCondTyC
+    , assertTyCon     = assertTyC
     , descriptionFile = path
-    , proofTokens = proofTokens
+    , proofTokens     = proofTokens
+    , debugMode       = True
     }
 
 -- From ghc-typelits-normalize.
@@ -112,29 +112,28 @@ lookupTHName th = do
     res <- tcPluginIO $ thNameToGhcNameIO nc th
     maybe (fail $ "Failed to lookup " ++ show th) return res
 
+generateNatEquations :: ProverState -> [Ct] -> ([(String, NatEq)], [Ct])
+generateNatEquations ps cts = (natEqProver, ct)
+  where
+    natEquations  = zip (map (ctToExpr ps) cts) cts
+    natEquations' = mapMaybe fst natEquations
+    ct            = map snd $ filter (\(e,_) -> isJust e) natEquations
+    prover        = map natEqToCoq natEquations'
+    natEqProver   = zip prover natEquations'
+
 proverPluginSolver :: ProverState -> TcPluginSolver
 proverPluginSolver ps ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
     let proofTokensRef = proofTokens ps
-        -- We generate equations for wanted proofs.
-        wNatEquations  = zip (map (ctToExpr ps) wanted) wanted
-        wNatEquations' = mapMaybe fst wNatEquations
-        wCt            = map snd $ filter (\(e,_) -> isJust e) wNatEquations
-        wProver        = map natEqToCoq wNatEquations'
-        wNatEqProver   = zip wProver wNatEquations'
+        -- We generate equations for wanted and given constraints.
+        (wNatEqProver, wCt) = generateNatEquations ps wanted
         -- We generate equations for given proofs too.
-        gNatEquations  = zip (map (ctToExpr ps) given) given
-        gNatEquations' = mapMaybe fst gNatEquations
-        gCt            = map snd $ filter (\(e,_) -> isJust e) gNatEquations
-        gProver        = map natEqToCoq gNatEquations'
-        gNatEqProver   = zip gProver gNatEquations'
+        (gNatEqProver, _)   = generateNatEquations ps given
     -- For debugging purposes.
-    -- TODO: Add a toggle for debugging.
-    -- mapM_ (tcPluginTrace "" . text) gProver
-    -- mapM_ (tcPluginTrace "" . text) wProver
-    -- mapM_ (tcPluginTrace "" . ppr) given
-    -- mapM_ (tcPluginTrace "" . ppr) wanted
+    when (debugMode ps) $ do
+      mapM_ (tcPluginTrace "" . ppr) given
+      mapM_ (tcPluginTrace "" . ppr) wanted
     -- For each expression, if it's not already in the proof state, add it.
     proofTokens <- tcPluginIO $ readIORef proofTokensRef
     let oldExprs   = map proofExpressionWanted proofTokens
@@ -154,7 +153,7 @@ proverPluginSolver ps ev given wanted =
         -- anyway we should only get one thing to prove at a time?
         return (TcPluginOk [] [])
     else do
-      -- If there are new texpressions, we know that it won't work since there's
+      -- If there are new expressions, we know that it won't work since there's
       -- no proof yet.
       -- For every new token, we have to create the associated new file.
       newTokens <- tcPluginIO $ mapM (createProofTokenWithFile (map snd gNatEqProver) . snd) wNatEqProver
@@ -195,7 +194,8 @@ termToExpr ps@(ProverState {..}) k
             e1 <- termToExpr ps x
             e2 <- termToExpr ps y
             return $ op e1 e2
-          Nothing -> do
+          Nothing -> do -- If we don't know the operator, we just syntactically
+                        -- translate it.
             let exprs = mapMaybe (termToExpr ps) terms
                 arity = length terms
                 name  = tyConName tc
@@ -219,7 +219,7 @@ ctToExpr ps@(ProverState {..}) ctEv =
     IrredPred pt -> go pt
     _ -> Nothing
   where
-    go (TyConApp tc xs) -- Discard the second part of the type equality
+    go (TyConApp tc xs)
       -- Inspired by ghc-typelits-natnormalize.
       | tc == assertTyCon
       -- , tc' == cTupleTyCon 0
@@ -239,20 +239,8 @@ ctToExpr ps@(ProverState {..}) ctEv =
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return (NatInEq e1 e2)
-    go2 tca@(TyConApp tc xs) _ = go tca
+    go2 tca@(TyConApp tc xs) _ = go tca -- Discard the second part of the type equality
     go2 t1 t2 = do
       e1 <- termToExpr ps t1
       e2 <- termToExpr ps t2
       return (NatEq e1 e2)
-
-transformVar :: TcTyVar -> TcPluginM (Maybe NatExpression)
-transformVar v =
-  let ty = varType v
-  in return Nothing
-
-transformCtEq :: EqCt -> TcPluginM (Maybe NatExpression)
-transformCtEq e =
-  return $ case eq_lhs e of
-    TyVarLHS tcV -> Nothing
-    TyFamLHS tyCon [args] -> Nothing
-

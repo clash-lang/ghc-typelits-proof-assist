@@ -55,7 +55,8 @@ createProofTokenWithFile givenNatEqs wantedNatEq = do
       gExprs = map natEqToCoq givenNatEqs
       -- We keep only 8 bytes from the hash for the name of the lemma.
       -- TODO: Find the best way to manage hashes.
-      title = drop 56 $ computeHash $ T.encodeUtf8 $ T.pack $ wExpr ++ concat gExprs
+      -- Token at the beginning to avoid starting with a number.
+      title = "f" ++ drop 56 (computeHash $ T.encodeUtf8 $ T.pack $ wExpr ++ concat gExprs)
       lemma = natEqToCoqLemma title givenNatEqs wantedNatEq
       file  = title ++ ".v"
       token = (createProofToken gExprs wExpr) { proofFile = Just file }
@@ -133,7 +134,7 @@ natExprToCoq (NatExp e1 e2) = "(" ++ natExprToCoq e1 ++ " ^ " ++ natExprToCoq e2
 natExprToCoq (NatSub e1 e2) = "(" ++ natExprToCoq e1 ++ " - " ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatDiv e1 e2) = "(" ++ natExprToCoq e1 ++ " / " ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatMod e1 e2) = "(" ++ natExprToCoq e1 ++ " % " ++ natExprToCoq e2 ++ ")"
-natExprToCoq (NatCon name exps) = "(" ++ name ++ concatMap (\e -> " " ++ natExprToCoq e) exps ++ ")"
+natExprToCoq (NatCon name exps) = "(" ++ name ++ concatMap ((" " ++) . natExprToCoq) exps ++ ")"
 
 natEqToCoq :: NatEq -> String
 natEqToCoq (NatEq e1 e2) = natExprToCoq e1 ++ " = " ++ natExprToCoq e2
