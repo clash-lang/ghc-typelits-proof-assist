@@ -118,6 +118,7 @@ data NatExpression =
 data NatEq =
   NatEq NatExpression NatExpression
   | NatInEq NatExpression NatExpression -- Only <= atm.
+  | NatValue NatExpression
   deriving Eq
 
 -- * Transforming expression into Coq code.
@@ -139,6 +140,7 @@ natExprToCoq (NatCon name exps) = "(" ++ name ++ concatMap ((" " ++) . natExprTo
 natEqToCoq :: NatEq -> String
 natEqToCoq (NatEq e1 e2) = natExprToCoq e1 ++ " = " ++ natExprToCoq e2
 natEqToCoq (NatInEq e1 e2) = natExprToCoq e1 ++ " <= " ++ natExprToCoq e2
+natEqToCoq (NatValue e) = natExprToCoq e
 
 -- TODO: We might as well get the variables from the available skolems.
 variablesFromNatExpr :: NatExpression -> [NatVariable]
@@ -156,6 +158,7 @@ variablesFromNatExpr _ = []
 variablesFromNatEq :: NatEq -> [NatVariable]
 variablesFromNatEq (NatEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 variablesFromNatEq (NatInEq e1 e2) = ordNub $ variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatEq (NatValue e) = ordNub $ variablesFromNatExpr e
 
 -- TODO: Rewrite it with a proper string builder
 natEqToCoqLemma :: String -> [NatEq] -> NatEq -> String

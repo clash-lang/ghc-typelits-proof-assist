@@ -239,7 +239,14 @@ ctToExpr ps@(ProverState {..}) ctEv =
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return (NatInEq e1 e2)
-    go2 tca@(TyConApp tc xs) _ = go tca -- Discard the second part of the type equality
+      | otherwise -- TODO: Unsure that we really need this.
+      = do
+        e <- termToExpr ps $ tyConKind tc
+        return (NatValue e)
+    go _  = Nothing -- Just to be total
+    -- TODO: Only discard the second part in specific cases.
+    -- It seems to work without handling this special case, though.
+    -- go2 tca@(TyConApp tc xs) _ = go tca -- Discard the second part of the type equality
     go2 t1 t2 = do
       e1 <- termToExpr ps t1
       e2 <- termToExpr ps t2
