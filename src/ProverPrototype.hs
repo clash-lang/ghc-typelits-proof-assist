@@ -66,7 +66,7 @@ proverPlugin args = -- tracePlugin "prototype-ghc-prover"
   TcPlugin
   { tcPluginInit  = proverPluginInit args
   , tcPluginSolve = proverPluginSolver
-  , tcPluginRewrite = proverPluginRewrite
+  , tcPluginRewrite = const emptyUFM
   , tcPluginStop = proverPluginStop
   }
 
@@ -122,16 +122,16 @@ generateNatEquations ps cts = (natEqProver, ct)
     natEqProver   = zip prover natEquations'
 
 proverPluginSolver :: ProverState -> TcPluginSolver
-proverPluginSolver ps ev given wanted =
+proverPluginSolver ps@(ProverState {..}) ev given wanted =
   do
     tcPluginTrace "" $ text "Tentative Coq output:"
-    let proofTokensRef = proofTokens ps
+    let proofTokensRef = proofTokens
         -- We generate equations for wanted and given constraints.
         (wNatEqProver, wCt) = generateNatEquations ps wanted
         -- We generate equations for given proofs too.
         (gNatEqProver, _)   = generateNatEquations ps given
     -- For debugging purposes.
-    when (debugMode ps) $ do
+    when debugMode $ do
       mapM_ (tcPluginTrace "" . ppr) given
       mapM_ (tcPluginTrace "" . ppr) wanted
     -- For each expression, if it's not already in the proof state, add it.
@@ -164,14 +164,11 @@ proverPluginSolver ps ev given wanted =
 evBy :: (Type, Type) -> EvTerm
 evBy (t1, t2) = evByFiat "External prover" t1 t2
 
-proverPluginRewrite :: ProverState -> UniqFM TyCon TcPluginRewriter
-proverPluginRewrite = const emptyUFM
-
 -- On shutdown, the plugin will write out the definition file.
 proverPluginStop :: ProverState -> TcPluginM ()
-proverPluginStop ps = tcPluginIO $ do
-  tokens <- readIORef (proofTokens ps)
-  encodeFile (descriptionFile ps) tokens
+proverPluginStop ps@(ProverState {..}) = tcPluginIO $ do
+  tokens <- readIORef proofTokens
+  encodeFile descriptionFile tokens
 
 -- These functions try to pattern match on type constructors. As GHC simplifies
 -- expressions using the type equations before we have them, it can get pretty
@@ -189,7 +186,7 @@ termToExpr ps@(ProverState {..}) k
   | Just (tc, terms) <- splitTyConApp_maybe k =
       let op = lookup tc opToConstructor in
         case op of
-          Just op -> do -- If it's a binary operator we know.
+          Just op -> do -- If it's a binary operator we know, from GHC.TypeLits.
             let x:[y] = terms
             e1 <- termToExpr ps x
             e2 <- termToExpr ps y
@@ -197,7 +194,6 @@ termToExpr ps@(ProverState {..}) k
           Nothing -> do -- If we don't know the operator, we just syntactically
                         -- translate it.
             let exprs = mapMaybe (termToExpr ps) terms
-                arity = length terms
                 name  = tyConName tc
             return $ NatCon (unpackFS $ getOccFS name) exprs
   -- A variable name.
@@ -244,7 +240,7 @@ ctToExpr ps@(ProverState {..}) ctEv =
         e <- termToExpr ps $ tyConKind tc
         return (NatValue e)
     go _  = Nothing -- Just to be total
-    -- TODO: Only discard the second part in specific cases.
+    -- TODO: Discard the second part in specific cases (and test whether it is needed or not).
     -- It seems to work without handling this special case, though.
     -- go2 tca@(TyConApp tc xs) _ = go tca -- Discard the second part of the type equality
     go2 t1 t2 = do

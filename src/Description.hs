@@ -3,6 +3,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Description where
 
@@ -41,7 +42,7 @@ createProofToken gExprs wExpr = ProofToken
   }
 
 isProofValid :: ProofToken -> Bool
-isProofValid (ProofToken { proofValidity = proofValidity }) =
+isProofValid (ProofToken {..}) =
   case proofValidity of
     Invalid -> False
     Valid _ -> True
@@ -56,7 +57,7 @@ createProofTokenWithFile givenNatEqs wantedNatEq = do
       -- We keep only 8 bytes from the hash for the name of the lemma.
       -- TODO: Find the best way to manage hashes.
       -- Token at the beginning to avoid starting with a number.
-      title = "f" ++ drop 56 (computeHash $ T.encodeUtf8 $ T.pack $ wExpr ++ concat gExprs)
+      title = "proof-" ++ drop 56 (computeHash $ T.encodeUtf8 $ T.pack $ wExpr ++ concat gExprs)
       lemma = natEqToCoqLemma title givenNatEqs wantedNatEq
       file  = title ++ ".v"
       token = (createProofToken gExprs wExpr) { proofFile = Just file }
@@ -80,16 +81,16 @@ computeHashFromFile path = do
   return $ computeHash proofFile
 
 runProof :: ProofToken -> IO ProofValidity
-runProof token
-  | Nothing   <- proofFile token = return Invalid
-  | Just path <- proofFile token, validity@(Valid oldHash) <- proofValidity token = do
+runProof token@(ProofToken {..})
+  | Nothing   <- proofFile = return Invalid
+  | Just path <- proofFile, validity@(Valid oldHash) <- proofValidity = do
       newHash <- computeHashFromFile path
       if oldHash == newHash then
         return validity -- Nothing changed.
       else do
         coqResult <- callCoq path
         return $ bool Invalid (Valid newHash) coqResult
-  | Just path <- proofFile token, Invalid <- proofValidity token = do
+  | Just path <- proofFile, Invalid <- proofValidity = do
       newHash <- computeHashFromFile path
       coqResult <- callCoq path
       return $ bool Invalid (Valid newHash) coqResult
@@ -103,6 +104,7 @@ checkProofToken token = do
 
 type NatVariable = String
 
+-- TODO: Make it more flexible.
 data NatExpression =
   NatVar NatVariable
   | NatLit Natural
