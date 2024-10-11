@@ -184,18 +184,17 @@ termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps@(ProverState {..}) k
   -- When we stumble upon a type family (e.g. `+`) application.
   | Just (tc, terms) <- splitTyConApp_maybe k =
-      let op = lookup tc opToConstructor in
-        case op of
-          Just op -> do -- If it's a binary operator we know, from GHC.TypeLits.
-            let x:[y] = terms
-            e1 <- termToExpr ps x
-            e2 <- termToExpr ps y
-            return $ op e1 e2
-          Nothing -> do -- If we don't know the operator, we just syntactically
-                        -- translate it.
-            let exprs = mapMaybe (termToExpr ps) terms
-                name  = tyConName tc
-            return $ NatCon (unpackFS $ getOccFS name) exprs
+      case lookup tc opToConstructor of
+        Just knowninaryOp -> do -- If it's a binary operator we know, from GHC.TypeLits.
+          let x:[y] = terms
+          e1 <- termToExpr ps x
+          e2 <- termToExpr ps y
+          return $ knowninaryOp e1 e2
+        Nothing -> do -- If we don't know the operator, we just syntactically
+                      -- translate it.
+          let exprs = mapMaybe (termToExpr ps) terms
+              name  = tyConName tc
+          return $ NatCon (unpackFS $ getOccFS name) exprs
   -- A variable name.
   | Just tv <- getTyVar_maybe k =
     do
@@ -211,11 +210,11 @@ ctToExpr :: ProverState -> Ct -> Maybe NatEq
 ctToExpr ps@(ProverState {..}) ctEv =
   case classifyPredType (ctEvPred $ ctEvidence ctEv) of
     -- If it's an equality, we try to translate it.
-    EqPred NomEq t1 t2 -> go2 t1 t2
-    IrredPred pt -> go pt
+    EqPred NomEq t1 t2 -> transformEquality t1 t2
+    IrredPred pt -> transformSingleTerm pt
     _ -> Nothing
   where
-    go (TyConApp tc xs)
+    transformSingleTerm (TyConApp tc xs)
       -- Inspired by ghc-typelits-natnormalize.
       | tc == assertTyCon
       -- , tc' == cTupleTyCon 0
@@ -239,11 +238,12 @@ ctToExpr ps@(ProverState {..}) ctEv =
       = do
         e <- termToExpr ps $ tyConKind tc
         return (NatValue e)
-    go _  = Nothing -- Just to be total
+    transformSingleTerm _  = Nothing -- Just to be total
     -- TODO: Discard the second part in specific cases (and test whether it is needed or not).
     -- It seems to work without handling this special case, though.
     -- go2 tca@(TyConApp tc xs) _ = go tca -- Discard the second part of the type equality
-    go2 t1 t2 = do
+    -- transformEquality
+    transformEquality t1 t2 = do
       e1 <- termToExpr ps t1
       e2 <- termToExpr ps t2
       return (NatEq e1 e2)

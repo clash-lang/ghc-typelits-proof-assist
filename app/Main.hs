@@ -1,4 +1,5 @@
-{-# LANGUAGE UndecidableInstances, AllowAmbiguousTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Main where
 
