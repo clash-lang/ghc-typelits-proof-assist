@@ -104,16 +104,13 @@ checkProofToken token = do
 
 type NatVariable = String
 
--- TODO: Make it more flexible.
+data NatOperator =
+  Add | Mul | Exp | Sub | Div | Mod deriving (Show, Eq)
+
 data NatExpression =
   NatVar NatVariable
   | NatLit Natural
-  | NatAdd NatExpression NatExpression
-  | NatMul NatExpression NatExpression
-  | NatExp NatExpression NatExpression
-  | NatSub NatExpression NatExpression
-  | NatDiv NatExpression NatExpression
-  | NatMod NatExpression NatExpression
+  | NatOp NatOperator NatExpression NatExpression
   | NatCon String [NatExpression]
   deriving (Show, Eq)
 
@@ -123,6 +120,16 @@ data NatEq =
   | NatValue NatExpression
   deriving Eq
 
+natOpToString :: NatOperator -> String
+natOpToString bOp =
+  case bOp of
+  Add -> "+"
+  Mul -> "*"
+  Exp -> "^"
+  Sub -> "-"
+  Div -> "/"
+  Mod -> "%"
+
 -- * Transforming expression into Coq code.
 -- TODO: Make the architecture more modular, to incorporate other provers as well.
 
@@ -130,13 +137,7 @@ data NatEq =
 natExprToCoq :: NatExpression -> String
 natExprToCoq (NatVar s) = s
 natExprToCoq (NatLit n) = show n
-natExprToCoq (NatAdd e1 e2) = "(" ++ natExprToCoq e1 ++ " + " ++ natExprToCoq e2 ++ ")"
-natExprToCoq (NatMul e1 e2) = "(" ++ natExprToCoq e1 ++ " * " ++ natExprToCoq e2 ++ ")"
--- TODO: This is contingent on "Require Import Nat.".
-natExprToCoq (NatExp e1 e2) = "(" ++ natExprToCoq e1 ++ " ^ " ++ natExprToCoq e2 ++ ")"
-natExprToCoq (NatSub e1 e2) = "(" ++ natExprToCoq e1 ++ " - " ++ natExprToCoq e2 ++ ")"
-natExprToCoq (NatDiv e1 e2) = "(" ++ natExprToCoq e1 ++ " / " ++ natExprToCoq e2 ++ ")"
-natExprToCoq (NatMod e1 e2) = "(" ++ natExprToCoq e1 ++ " % " ++ natExprToCoq e2 ++ ")"
+natExprToCoq (NatOp bOp e1 e2) = "(" ++ natExprToCoq e1 ++ natOpToString bOp ++ natExprToCoq e2 ++ ")"
 natExprToCoq (NatCon name exps) = "(" ++ name ++ concatMap ((" " ++) . natExprToCoq) exps ++ ")"
 
 natEqToCoq :: NatEq -> String
@@ -147,12 +148,7 @@ natEqToCoq (NatValue e) = natExprToCoq e
 -- TODO: We might as well get the variables from the available skolems.
 variablesFromNatExpr :: NatExpression -> [NatVariable]
 variablesFromNatExpr (NatVar s) = [s]
-variablesFromNatExpr (NatAdd e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatMul e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatExp e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatSub e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatDiv e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
-variablesFromNatExpr (NatMod e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
+variablesFromNatExpr (NatOp _ e1 e2)  = variablesFromNatExpr e1 ++ variablesFromNatExpr e2
 variablesFromNatExpr (NatCon _ exps) = concatMap variablesFromNatExpr exps
 variablesFromNatExpr _ = []
 

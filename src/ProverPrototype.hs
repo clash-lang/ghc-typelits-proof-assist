@@ -177,8 +177,8 @@ proverPluginStop ps@(ProverState {..}) = tcPluginIO $ do
 -- we'll have to deal with.
 
 opToConstructor :: [(TyCon, NatExpression -> NatExpression -> NatExpression)]
-opToConstructor = [(typeNatAddTyCon, NatAdd), (typeNatMulTyCon, NatMul), (typeNatDivTyCon, NatDiv),
-                   (typeNatExpTyCon, NatExp), (typeNatSubTyCon, NatSub), (typeNatModTyCon, NatMod)]
+opToConstructor = [(typeNatAddTyCon, NatOp Add), (typeNatMulTyCon, NatOp Mul), (typeNatDivTyCon, NatOp Div),
+                   (typeNatExpTyCon, NatOp Exp), (typeNatSubTyCon, NatOp Sub), (typeNatModTyCon, NatOp Mod)]
 
 termToExpr :: ProverState -> Kind -> Maybe NatExpression
 termToExpr ps@(ProverState {..}) k
@@ -230,7 +230,7 @@ ctToExpr ps@(ProverState {..}) ctEv =
       , eqTc == promotedTrueDataCon
       , TyConApp gtTc [] <- gt
       , gtTc == promotedFalseDataCon
-      = do      
+      = do
         e1 <- termToExpr ps x
         e2 <- termToExpr ps y
         return (NatInEq e1 e2)
