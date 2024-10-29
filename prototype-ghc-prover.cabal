@@ -25,7 +25,7 @@ common shared
   ghc-options:
     -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
     -Wmissing-deriving-strategies -Wunused-foralls -Wunused-foralls
-    -fprint-explicit-foralls -fprint-explicit-kinds -ddump-tc-trace
+    -fprint-explicit-foralls -fprint-explicit-kinds
 
   default-extensions:
     BangPatterns
@@ -74,8 +74,8 @@ common shared
   default-language:   Haskell2010
 
 library
-  exposed-modules:    ProverPrototype
-  other-modules:      Description
+  exposed-modules:    ProverPlugin
+  other-modules:      Description, ProverPrototype
   hs-source-dirs:     src
   build-depends:
     , base
@@ -89,11 +89,14 @@ library
     , text
     , directory
     , base16-bytestring
+    , template-haskell
+    , syb
 
 executable proofs
   import: shared
   build-depends:
     , prototype-ghc-prover
-  ghc-options:        -fplugin=ProverPrototype -fplugin-opt=ProverPrototype:description
+    , constraints
+  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:description -ddump-parsed-ast
   main-is: Main.hs
   hs-source-dirs: app
