@@ -97,6 +97,6 @@ executable proofs
   build-depends:
     , prototype-ghc-prover
     , constraints
-  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:description -ddump-parsed-ast
+  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:preamble -ddump-parsed-ast
   main-is: Main.hs
   hs-source-dirs: app

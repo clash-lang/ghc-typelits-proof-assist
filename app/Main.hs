@@ -37,7 +37,6 @@ type family Dummy (n :: Nat) (m :: Nat) :: Nat where
 -- test5 = Dict
 
 {-PrototypeProver test6 proof
-  Require Import Coq.Arith.PeanoNat.
   intros.
   apply le_S in H.
   apply le_S_n.

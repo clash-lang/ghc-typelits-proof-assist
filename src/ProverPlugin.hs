@@ -32,6 +32,7 @@ import GHC.Types.Error (mkPlainError, mkSimpleUnknownDiagnostic, mkMessages)
 import GHC.Parser.Errors.Types (PsMessage(..))
 import GHC.Utils.Error (mkPlainErrorMsgEnvelope)
 import GHC.Data.Bag (listToBag)
+import Data.Functor ((<&>))
 
 prototypeProverToken :: String
 prototypeProverToken = "{-PrototypeProver"
@@ -44,6 +45,7 @@ data ProofStatement = ProofStatement
   , proofStatementSig   :: String
   , proofProver         :: Prover
   , proofStatementProof :: String -- Comes from the annotation.
+  , proofPreamble       :: String
   } deriving Show
 
 data ProofComment = ProofComment
@@ -66,7 +68,7 @@ prototypeOptionPlugin :: [CommandLineOption] -> HscEnv -> IO HscEnv
 prototypeOptionPlugin _ hscEnv = return hscEnv { hsc_dflags = hsc_dflags hscEnv `gopt_set` Opt_KeepRawTokenStream }
 
 analyzeParsedModule :: [CommandLineOption] -> ModSummary -> ParsedResult -> Hsc ParsedResult
-analyzeParsedModule _ ms parsedResult = do
+analyzeParsedModule cmdOpts ms parsedResult = do
   let hsParsedMod = parsedResultModule parsedResult
       hsMod       = unLoc $ hpm_module hsParsedMod
       -- We retrieve all the declarations, and filter out by <whatever>.
@@ -81,8 +83,10 @@ analyzeParsedModule _ ms parsedResult = do
       -- First, we'll collect all signatures and transform them.
       sigs = mapMaybe analyzeSignature decls
       parsedComments = mapMaybe parseCommentsForProofs comments
-      -- Then, we'll only keep the ones that have associated annotations.
-      statements = [sigToStatement sig proofCom | sig <- sigs, proofCom <- parsedComments, sigName sig == proofCommentName proofCom]
+  -- Load the preamble
+  preamble <- liftIO $ loadPreamble cmdOpts
+  -- Then, we'll only keep the ones that have associated annotations.
+  let statements = [sigToStatement preamble sig proofCom | sig <- sigs, proofCom <- parsedComments, sigName sig == proofCommentName proofCom]
 
   -- Let's print the comments here to see if we did right.
   -- TODO: toggle this out
@@ -102,6 +106,10 @@ analyzeParsedModule _ ms parsedResult = do
       }
     }
 
+loadPreamble :: [CommandLineOption] -> IO String
+loadPreamble [] = return ""
+loadPreamble (file:_) = readFile file <&> (++ "\n")
+
 createErrorMessage :: String -> PsError
 createErrorMessage = PsUnknownMessage . mkSimpleUnknownDiagnostic . mkPlainError [] . fromString
 
@@ -118,6 +126,7 @@ callCoq path = do
 runProofStatement :: ProofStatement -> IO (Bool, String)
 runProofStatement ps@(ProofStatement {..}) = do
   -- TODO: fetch system's temporary directory in a better way.
+  -- Could be given as an argument.
   -- Write the proof to the file
   let path = "/tmp/" ++ proofStatementName ++ ".v"
   let coqProof = statementToCoq ps
@@ -127,14 +136,15 @@ runProofStatement ps@(ProofStatement {..}) = do
 
 statementToCoq :: ProofStatement -> String
 statementToCoq (ProofStatement {..}) =
-  "Lemma " ++ proofStatementName ++ " : " ++ proofStatementSig ++ ".\n" ++ proofStatementProof ++ "\nQed.\n"
+  proofPreamble ++ "Lemma " ++ proofStatementName ++ " : " ++ proofStatementSig ++ ".\n" ++ proofStatementProof ++ "\nQed.\n"
 
-sigToStatement :: Signature -> ProofComment -> ProofStatement
-sigToStatement (Signature {..}) (ProofComment {..})= ProofStatement
+sigToStatement :: String -> Signature -> ProofComment -> ProofStatement
+sigToStatement preamble (Signature {..}) (ProofComment {..})= ProofStatement
   { proofStatementName  = sigName
   , proofStatementSig   = sigType
   , proofProver         = proofCommentProver
   , proofStatementProof = proofCommentProof
+  , proofPreamble       = preamble
   }
 
 parseCommentsForProofs :: LEpaComment -> Maybe ProofComment
