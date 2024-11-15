@@ -44,7 +44,11 @@ whose signature correspond to Haskell's `test` function here, and the proof
 being the Coq snippet in the comment above the function. It then runs `coqc`
 on it to check the proof, and compilation should fail if the proof doesn't work.
 
-The syntax for comments is to be documented further.
+In order to be able to define other type and avoid imports in snippets, you can
+use a preamble file by giving it as an argument to the plugin. This file will
+be used as a prefix for every proof the plugin will run.
+
+The syntax for comments is to be documented further at a later point in time.
 
 ## Awesome, now I want to run it!
 
@@ -58,3 +62,13 @@ It should be adapted to run on GHC 9.10 pretty soon.
 To compile the example, run `nix shell` and then `cabal build`. It'll print
 too much information, so consider redirecting the output to a file, e.g. `cabal
 build > log`.
+
+## Experimental syntax
+
+```haskell
+{-PrototypeProver <function name> <command> ... @-}
+```
+starts a prover-related block of code, it can either contain a proof (indicated
+by the `proof` keyword) or it can be empty (indicated by the `sig` keyword). In
+the latter case, the prover will pass, outputting the required signature so that
+the developer can work with it.

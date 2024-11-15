@@ -88,15 +88,9 @@ analyzeParsedModule cmdOpts ms parsedResult = do
   -- Then, we'll only keep the ones that have associated annotations.
   let statements = [sigToStatement preamble sig proofCom | sig <- sigs, proofCom <- parsedComments, sigName sig == proofCommentName proofCom]
 
-  -- Let's print the comments here to see if we did right.
-  -- TODO: toggle this out
-  liftIO $ print "Here be comments"
-  liftIO $ print statements
-
   validities <- liftIO $ mapM runProofStatement statements
-  let validity = all fst validities
 
-  if validity then
+  if all fst validities then
     return parsedResult
   else do
     let coqErrors = map (mkPlainErrorMsgEnvelope (UnhelpfulSpan UnhelpfulGenerated) .createErrorMessage . snd) validities
@@ -116,8 +110,7 @@ createErrorMessage = PsUnknownMessage . mkSimpleUnknownDiagnostic . mkPlainError
 -- Calls Coq on the given file, returns True if it worked.
 callCoq :: FilePath -> IO (Bool, String)
 callCoq path = do
-  -- TODO: Manage Coq's output to present it to the user.
-  -- Ignore stdout and stderr.
+  -- We return stderr.
   (exitCode, _, output) <- readProcessWithExitCode "coqc" [path] ""
   return (exitCode == ExitSuccess, output)
 

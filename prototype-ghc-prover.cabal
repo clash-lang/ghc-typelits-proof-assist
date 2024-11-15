@@ -75,7 +75,7 @@ common shared
 
 library
   exposed-modules:    ProverPlugin
-  other-modules:      Description, ProverPrototype
+--  other-modules:      Description
   hs-source-dirs:     src
   build-depends:
     , base
@@ -97,6 +97,6 @@ executable proofs
   build-depends:
     , prototype-ghc-prover
     , constraints
-  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:preamble -ddump-parsed-ast
+  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:preamble
   main-is: Main.hs
   hs-source-dirs: app
