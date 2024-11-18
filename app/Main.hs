@@ -1,10 +1,10 @@
-{-# LANGUAGE  UndecidableInstances, AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Main where
 
 import GHC.TypeLits
 
-import Data.Proxy (Proxy)
 import Data.Constraint (Dict (..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -16,25 +16,6 @@ import Unsafe.Coerce (unsafeCoerce)
 main :: IO ()
 main = do 
   return ()
-
-test :: KnownNat n => Proxy n -> Proxy n
-test = id
-
--- test3 :: (KnownNat x) => Proxy x -> Proxy y -> Proxy (x + y) -> Proxy (y + x)
--- test3 _ _ = id
-
--- test4 :: forall (n :: Nat) . Dict (n <= n + 1)
--- test4 = Dict
-
-type family Dummy (n :: Nat) (m :: Nat) :: Nat where
-  Dummy x 3 = (x * x) * x
-  Dummy x y = (x * x) * y
-
-{-PrototypeProver test5 proof
-  apply th_whatever.
-  @-}
--- test5 :: forall (n :: Nat) (m :: Nat) . (m <= n) => Dict (Dummy n m <= (n * n) * n)
--- test5 = Dict
 
 {-PrototypeProver test6 proof
   intros.

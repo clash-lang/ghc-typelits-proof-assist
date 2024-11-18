@@ -63,7 +63,10 @@ To compile the example, run `nix shell` and then `cabal build`. It'll print
 too much information, so consider redirecting the output to a file, e.g. `cabal
 build > log`.
 
-## Experimental syntax
+## Experimental syntax: might not be supported yet
+
+This section describes experimental changes that may or may not be implemented
+yet.
 
 ```haskell
 {-PrototypeProver <function name> <command> ... @-}

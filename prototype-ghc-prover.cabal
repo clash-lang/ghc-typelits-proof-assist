@@ -1,9 +1,9 @@
 cabal-version:      2.4
 name:               prototype-ghc-prover
 version:            0.1.0.0
-copyright:          2024 QBayLogic
-maintainer:         diego@qbaylogic.com
-author:             Diego Diverio
+copyright:          Copyright © 2024 QBayLogic B.V.
+maintainer:         devops@qbaylogic.com
+author:             QBayLogic B.V.
 category:           Type System
 homepage:
 
@@ -71,11 +71,10 @@ common shared
   build-depends:
     , base          >=4.9   && <5
 
-  default-language:   Haskell2010
+  default-language:   GHC2021
 
 library
   exposed-modules:    ProverPlugin
---  other-modules:      Description
   hs-source-dirs:     src
   build-depends:
     , base
@@ -91,6 +90,9 @@ library
     , base16-bytestring
     , template-haskell
     , syb
+    , directory
+    , parsec
+    , filepath
 
 executable proofs
   import: shared
