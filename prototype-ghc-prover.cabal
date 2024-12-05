@@ -1,9 +1,11 @@
 cabal-version:      2.4
 name:               prototype-ghc-prover
 version:            0.1.0.0
-copyright:          Copyright © 2024 QBayLogic B.V.
-maintainer:         devops@qbaylogic.com
+license:            Apache-2.0
+license-file:       LICENSE
 author:             QBayLogic B.V.
+maintainer:         devops@qbaylogic.com
+copyright:          Copyright © 2024 QBayLogic B.V.
 category:           Type System
 homepage:
 
