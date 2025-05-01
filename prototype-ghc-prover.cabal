@@ -5,7 +5,7 @@ license:            Apache-2.0
 license-file:       LICENSE
 author:             QBayLogic B.V.
 maintainer:         devops@qbaylogic.com
-copyright:          Copyright © 2024 QBayLogic B.V.
+copyright:          Copyright © 2024-2025 QBayLogic B.V.
 category:           Type System
 homepage:
 
@@ -23,84 +23,62 @@ extra-source-files:
   LICENSE
   README.md
 
-common shared
-  ghc-options:
-    -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
-    -Wmissing-deriving-strategies -Wunused-foralls -Wunused-foralls
-    -fprint-explicit-foralls -fprint-explicit-kinds
+flag examples
+  description:
+    Build the example applications. All of the supported proof
+    assistants must be present in order to verify the correctness of
+    the utilized proofs.
+  default: False
+  manual: True
 
+common shared
+  default-language: GHC2024
+  ghc-options: -Wall -Wcompat
   default-extensions:
-    BangPatterns
-    ConstraintKinds
-    DataKinds
-    DeriveDataTypeable
-    DeriveFoldable
-    DeriveFunctor
-    DeriveGeneric
-    DeriveLift
-    DeriveTraversable
-    DerivingStrategies
-    DerivingVia
-    EmptyCase
-    EmptyDataDecls
-    EmptyDataDeriving
-    ExistentialQuantification
-    ExplicitForAll
-    FlexibleContexts
-    FlexibleInstances
-    GADTSyntax
-    GeneralisedNewtypeDeriving
-    ImportQualifiedPost
-    KindSignatures
-    LambdaCase
-    MultiParamTypeClasses
     MultiWayIf
     NoStarIsType
-    NumericUnderscores
     OverloadedStrings
-    PolyKinds
-    PostfixOperators
-    RankNTypes
-    ScopedTypeVariables
-    StandaloneDeriving
-    StandaloneKindSignatures
-    TupleSections
-    TypeApplications
+    RecordWildCards
     TypeFamilies
-    TypeOperators
     ViewPatterns
-
   build-depends:
-    , base          >=4.9   && <5
-
-  default-language:   GHC2021
+    , base >= 4.20 && < 4.21
 
 library
-  exposed-modules:    ProverPlugin
-  hs-source-dirs:     src
-  build-depends:
-    , base
-    , ghc-tcplugins-extra
-    , ghc
-    , aeson
-    , time
-    , cryptohash-sha256
-    , bytestring
-    , process
-    , text
-    , directory
-    , base16-bytestring
-    , template-haskell
-    , syb
-    , directory
-    , parsec
-    , filepath
-
-executable proofs
   import: shared
+  hs-source-dirs: src
+  exposed-modules:
+    GHC.TypeNats.Proof
+    GHC.TypeNats.Proof.Plugin
+  other-modules:
+    GHC.TypeNats.Proof.Plugin.KnownTypes
+    GHC.TypeNats.Proof.Plugin.Comment
+    GHC.TypeNats.Proof.Plugin.Config
+    GHC.TypeNats.Proof.Plugin.Proof
+    GHC.TypeNats.Proof.Plugin.Prover
+    GHC.TypeNats.Proof.Plugin.Prover.Tynal
+    GHC.TypeNats.Proof.Plugin.Prover.Agda
+    GHC.TypeNats.Proof.Plugin.Prover.Coq
   build-depends:
-    , prototype-ghc-prover
-    , constraints
-  ghc-options:        -fplugin=ProverPlugin -fplugin-opt=ProverPlugin:preamble
-  main-is: Main.hs
-  hs-source-dirs: app
+    , containers
+    , directory
+    , filepath
+    , ghc >= 9.10 && < 9.12
+    , ghc-typelits-extra
+    , process
+    , string-combinators
+    , transformers
+
+library examples
+  import: shared
+  hs-source-dirs: examples
+  if !flag(examples)
+    buildable: False
+  else
+    build-depends:
+      , base
+      , prototype-ghc-prover
+  exposed-modules:
+    Intro
+    Intro.CoqProof
+    Intro.AgdaProof
