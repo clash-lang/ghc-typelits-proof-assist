@@ -4,9 +4,19 @@ dist-*
 cabal.project.local
 cabal.project.local~
 
+# emacs
+tags
+TAGS
+
+# ghcid
+.ghcid
+
 # nix
 result
 result-*
+
+# plugin
+proofs
 
 # direnv
 .direnv
