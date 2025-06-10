@@ -1,5 +1,5 @@
 cabal-version:      2.4
-name:               prototype-ghc-prover
+name:               ghc-typelits-proof-assist
 version:            0.1.0.0
 license:            Apache-2.0
 license-file:       LICENSE
@@ -39,11 +39,12 @@ common common-options
     NoStarIsType
     OverloadedRecordDot
     OverloadedStrings
+    PatternSynonyms
     RecordWildCards
     TypeFamilies
     ViewPatterns
   build-depends:
-    , base >= 4.20 && < 4.21
+    , base >= 4.20 && < 4.22
 
 library
   import: common-options
@@ -65,8 +66,9 @@ library
     , containers
     , directory
     , filepath
-    , ghc >= 9.10 && < 9.12
+    , ghc >= 9.10 && < 9.14
     , ghc-typelits-extra
+    , ghc-tcplugin-api
     , process
     , string-combinators
     , transformers
@@ -79,7 +81,7 @@ library examples
   else
     build-depends:
       , base
-      , prototype-ghc-prover
+      , ghc-typelits-proof-assist
   exposed-modules:
     Intro
     Intro.CoqProof

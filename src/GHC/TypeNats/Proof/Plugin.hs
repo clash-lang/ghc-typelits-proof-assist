@@ -2,6 +2,7 @@
    via Haskell's type level naturals, with a proof assistant, to
    formally verify the correctness of the property stated.
 -}
+{-# LANGUAGE CPP #-}
 module GHC.TypeNats.Proof.Plugin (plugin) where
 
 import Control.Applicative ((<|>))
@@ -15,22 +16,29 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.Maybe (isJust, catMaybes, mapMaybe)
 import Data.Monoid (First(..))
 import Data.String (IsString(..))
+import GHC.TcPlugin.API
+  ( TcPlugin(..), TcPluginM, TcPluginStage(..), TcPluginSolveResult(..)
+  , EvTerm(..), Expr(..), EqRel(..), Role(..), Ct, TcGblEnv, PredType
+  , Coercion, UniqFM, Id, Name, FastString, SDoc
+  , pattern EqPred, pattern IrredPred
+  , mkTcPlugin, tcPluginIO, tcLookupTyCon, tcLookupClass, mkNonCanonical
+  , mkPluginUnivCo,  mkTyConApp, readTcRef, writeTcRef, getInstEnvs
+  , ctLoc, ctOrigin, ctPred, ppr, unLoc, emptyUFM, listToUFM, evCast
+  , newWanted, classifyPredType, eqType
+  )
+import GHC.TcPlugin.API.Internal (unsafeLiftTcM)
 import GHC.Builtin.Types
   ( cTupleTyCon, cTupleDataCon, naturalTy, constraintKindTyConName
   , promotedTrueDataCon, promotedFalseDataCon
   )
 import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
-import GHC.Core (Expr(..))
-import GHC.Core.Coercion (mkUnivCo)
 import GHC.Core.DataCon (dataConWrapId)
 import GHC.Core.Opt.Monad (getModule)
-import GHC.Core.Predicate (Pred(..), EqRel(..), classifyPredType)
-import GHC.Core.TyCo.Rep (Type(..), TyLit(..), UnivCoProvenance (..))
-import GHC.Core.TyCon (Role(..), isClassTyCon)
+import GHC.Core.TyCo.Rep (Type(..), TyLit(..))
+import GHC.Core.TyCon (isClassTyCon)
 import GHC.Core.InstEnv (ClsInst(..), classInstances)
 import GHC.Core.RoughMap (RoughMatchTc(..))
 import GHC.Data.IOEnv (IORef)
-import GHC.Data.FastString (FastString)
 import GHC.Driver.Env (hscUpdateFlags)
 import GHC.Driver.DynFlags (GeneralFlag(..), gopt_set)
 import GHC.Driver.Plugins
@@ -43,31 +51,28 @@ import GHC.Utils.GlobalVars (global)
 import GHC.Rename.Utils (warnUnusedLocalBinds)
 import GHC.Stack (HasCallStack)
 import GHC.Tc.Errors.Types (TcRnMessage(..))
-import GHC.Tc.Plugin
-  ( TcPluginM, tcPluginIO, tcLookupClass, tcLookupTyCon
-  , getInstEnvs, newWanted, unsafeTcPluginTcM
-  )
-import GHC.Tc.Types (TcPlugin(..), TcPluginSolveResult(..), TcGblEnv(..), TcM)
-import GHC.Tc.Types.TcRef (readTcRef, writeTcRef, newTcRef)
-import GHC.Tc.Types.Constraint
-  (Ct(..), ctLoc, ctLocSpan, mkNonCanonical, ctOrigin, ctPred)
+import GHC.Tc.Types (TcM)
+import GHC.Tc.Types.TcRef (newTcRef)
+#if MIN_VERSION_ghc(9,12,0)
+import GHC.Tc.Types.CtLoc (ctLocSpan)
+#else
+import GHC.Tc.Types.Constraint (ctLocSpan)
+#endif
 import GHC.Tc.Types.Origin (CtOrigin(..), NakedScFlag(..), ClsInstOrQC(..))
-import GHC.Tc.Types.Evidence (EvTerm(..), EvBindsVar, evId, evCast)
+import GHC.Tc.Types.Evidence (evId)
 import GHC.Tc.Utils.Monad
   (addErrAt, newNameAt, addErrAt, mapMaybeM, failIfErrsM)
-import GHC.Tc.Utils.TcType (PredType, eqType, mkTyConApp)
-import GHC.Types.Id (Id)
 import GHC.Types.Name
-  ( Name, mkVarOccFS, getOccName, getOccFS, getName, occNameFS
+  ( mkVarOccFS, getOccName, getOccFS, getName, occNameFS
   , getSrcSpan, isTyConName
   )
 import GHC.Types.Name.Set (emptyFVs)
-import GHC.Types.SrcLoc (SrcSpan(..), unLoc, noSrcSpan)
+import GHC.Types.SrcLoc (SrcSpan(..), noSrcSpan)
 import GHC.Types.Unique.FM
-  (UniqFM, emptyUFM, lookupUFM, addToUFM, nonDetEltsUFM, minusUFM, listToUFM)
+  (lookupUFM, addToUFM, nonDetEltsUFM, minusUFM)
 import GHC.Unit.Types (GenModule(..))
 import GHC.Utils.Panic (sorryDoc)
-import GHC.Utils.Outputable (SDoc, (<+>), ($$), quotes, ppr, vcat, nest)
+import GHC.Utils.Outputable ((<+>), ($$), quotes, vcat, nest)
 import Language.Haskell.Syntax.Decls (StandaloneKindSig(..))
 import Language.Haskell.Syntax.Module.Name (moduleNameSlashes)
 import System.Directory (createDirectoryIfMissing)
@@ -103,7 +108,7 @@ plugin = defaultPlugin
         $ Left $ getProofComments $ hpm_module parsedResultModule
       return ParsedResult{..}
   , renamedResultAction = checkProofComments gref
-  , tcPlugin = \opts -> Just $ TcPlugin
+  , tcPlugin = \opts -> Just $ mkTcPlugin $ TcPlugin
       { -- although the documentation claims a different behavior,
         -- this action is executed before the `renameResultAction`,
         -- which is why we cannot get the data from the `gref` yet
@@ -123,12 +128,12 @@ plugin = defaultPlugin
                         ]
                     )
                 ]
-            unsafeTcPluginTcM failIfErrsM
+            unsafeLiftTcM failIfErrsM
             tcPluginIO exitFailure
           Right cfg -> do
             pref <- tcPluginIO $ newTcRef Nothing
             return (cfg, pref, gref)
-      , tcPluginSolve = \(cfg, pref, sref) env gs ws -> do
+      , tcPluginSolve = \(cfg, pref, sref) gs ws -> do
           -- skip the simplification phase
           if null ws then return $ TcPluginOk [] []
           else do
@@ -142,11 +147,11 @@ plugin = defaultPlugin
                   -- providing the signature of the proof
                   proofs <- mapMaybeM (hasProof kt ie) proofComments
                   -- fail, if errors have been encountered
-                  unsafeTcPluginTcM failIfErrsM
+                  unsafeLiftTcM failIfErrsM
                   -- otherwise store the result to be re-used
                   tcPluginIO $ writeTcRef pref $ Just (kt, proofs)
                   return (kt, proofs)
-            pluginSolve cfg kt proofs env gs ws
+            pluginSolve cfg kt proofs gs ws
       , tcPluginRewrite = const emptyUFM
       , tcPluginStop = const $ return ()
       }
@@ -254,12 +259,11 @@ pluginSolve ::
   PluginConfig ->
   KnownTypes ->
   [Proof] ->
-  EvBindsVar ->
   [Ct] ->
   [Ct] ->
-  TcPluginM TcPluginSolveResult
-pluginSolve PluginConfig{..} kt@KnownTypes{..} proofs _ev givens wanteds = do
-  Module{..} <- unsafeTcPluginTcM getModule
+  TcPluginM 'Solve TcPluginSolveResult
+pluginSolve PluginConfig{..} kt@KnownTypes{..} proofs givens wanteds = do
+  Module{..} <- unsafeLiftTcM getModule
   -- every proof should produce a wanted (assuming that GHC cannot
   -- prove them on it's own). We only can identify these wanteds via
   -- the source location of the matching instances, as no other
@@ -302,7 +306,7 @@ pluginSolve PluginConfig{..} kt@KnownTypes{..} proofs _ev givens wanteds = do
           return Nothing
 
     -- fail, if errors have been encountered
-    unsafeTcPluginTcM failIfErrsM
+    unsafeLiftTcM failIfErrsM
     -- otherwise return the new evidence
     return $ TcPluginOk evs []
   else if autoProve then do
@@ -482,7 +486,8 @@ addEvidence ct = ( , ct) <$> case classifyPredType $ ctPred ct of
         in return $ evCast dcApp $ mkUnivCoP Representational ty0 ty1
   _ -> Nothing
  where
-  mkUnivCoP = mkUnivCo $ PluginProv pluginName
+  mkUnivCoP :: Role -> Type -> Type -> Coercion
+  mkUnivCoP r = mkPluginUnivCo pluginName r []
 
 -- | Some alternative 'Ct' pretty printer.
 pprCt :: HasCallStack => KnownTypes -> Ct -> SDoc

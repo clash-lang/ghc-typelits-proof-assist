@@ -11,26 +11,29 @@ import Control.Monad (forM_)
 import Data.Either (partitionEithers)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
+import GHC.TcPlugin.API
+  ( Name, Unique, Outputable, MonadTcPlugin, SDoc, TyVar, PredType
+  , ppr, tcLookupClass
+  )
+import GHC.TcPlugin.API.Internal (unsafeLiftTcM)
 import GHC.Core (IsOrphan(..))
 import GHC.Core.Class
   (Class(..), classMethods, classATs, pprFunDep, classTvsFds, classSCTheta)
-import GHC.Core.TyCo.Rep (Type(..), PredType)
-import GHC.Core.Type (TyVar, substTy, zipTvSubst)
+import GHC.Core.TyCo.Rep (Type(..))
+import GHC.Core.Type (substTy, zipTvSubst)
 import GHC.Core.InstEnv
   ( InstEnvs(..), ClsInst(..), OverlapMode(..)
   , classInstances, memberInstEnv, instanceSig, overlapMode
   )
 import GHC.Tc.Errors.Types (TcRnMessage(..))
-import GHC.Tc.Plugin (TcPluginM, tcLookupClass, unsafeTcPluginTcM)
 import GHC.Tc.Utils.Monad (addErrAt)
 import GHC.Types.Error (GhcHint(..), mkPlainError, mkSimpleUnknownDiagnostic)
-import GHC.Types.Name (NamedThing(..), Name, getSrcSpan)
+import GHC.Types.Name (NamedThing(..), getSrcSpan)
 import GHC.Types.SrcLoc (SrcSpan)
-import GHC.Types.Unique (Unique, Uniquable(..))
+import GHC.Types.Unique (Uniquable(..))
 import GHC.Types.Unique.Supply (MonadUnique(..))
 import GHC.Utils.Outputable
-  ( SDoc, Outputable(..), (<+>), ($$), (<>)
-  , bullet, nest, vcat, quotes, hsep
+  ( (<+>), ($$), (<>), bullet, nest, vcat, quotes, hsep
   )
 
 import GHC.TypeNats.Proof.Plugin.KnownTypes
@@ -60,7 +63,9 @@ instance Outputable Proof where
 
 -- | Checks for the given proof comments, whether they match with a corresponsing
 -- class / instance combination describing the proof signature.
-hasProof :: KnownTypes -> InstEnvs -> ProofComment Name -> TcPluginM (Maybe Proof)
+hasProof ::
+  MonadTcPlugin m =>
+  KnownTypes -> InstEnvs -> ProofComment Name -> m (Maybe Proof)
 hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
   proofClass <- tcLookupClass pcName
 
@@ -136,7 +141,7 @@ hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
                ] Nothing
 
       if null noVs && null noWs && null noGs then do
-        proofUnique <- unsafeTcPluginTcM getUniqueM
+        proofUnique <- unsafeLiftTcM getUniqueM
         return $ Just Proof{..}
       else do
         forM_ noVs $ \ty ->
@@ -157,9 +162,8 @@ hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
         return Nothing
  where
   checkForNoUnwanted ::
-    Outputable a =>
-    SDoc -> SrcSpan -> SDoc -> (a -> SDoc) -> (a -> SrcSpan) -> [a] ->
-    TcPluginM ()
+    (Outputable a, MonadTcPlugin m) =>
+    SDoc -> SrcSpan -> SDoc -> (a -> SDoc) -> (a -> SrcSpan) -> [a] -> m ()
   checkForNoUnwanted ref loc xType p gLoc = \case
     []  -> return ()
     x:_ -> addTcPluginErr loc
@@ -176,7 +180,8 @@ hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
       ]
 
   addTcPluginErrIns ::
-    SDoc -> SrcSpan ->  SrcSpan -> [SDoc] -> Maybe [SDoc] -> TcPluginM ()
+    MonadTcPlugin m =>
+    SDoc -> SrcSpan ->  SrcSpan -> [SDoc] -> Maybe [SDoc] -> m ()
   addTcPluginErrIns ref loc pcLoc msgs mhints =
     addTcPluginErr loc
       ( ( ref <+> "has been marked as a type-nat proof by the comment at:"
@@ -190,7 +195,7 @@ hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
         , "disable the plugin."
         ] mhints
 
-  addTcPluginErrTy :: SrcSpan -> Type -> TcPluginM ()
+  addTcPluginErrTy :: MonadTcPlugin m => SrcSpan -> Type -> m ()
   addTcPluginErrTy loc ty = addTcPluginErr loc
     [ "The following type expression is currently not supported:"
       $$ nest 2 (ppr ty)
@@ -216,16 +221,16 @@ tySignature sigClass sigInstance = (noTyVars, Signature{..})
     ty        -> Left ty
 
 -- | Adds plugin specific error formatting.
-addTcPluginErr :: SrcSpan -> [SDoc] -> [SDoc] -> TcPluginM ()
+addTcPluginErr :: MonadTcPlugin m => SrcSpan -> [SDoc] -> [SDoc] -> m ()
 addTcPluginErr loc msgs hints
   = addErrAtTc loc (UnknownHint <$> hints)
   $ vcat $ fmap (bullet <+>)
   $ (quotes pluginName <+> "is encountering issues") : msgs
 
 -- | Adds a new error in the 'TcPluginM' monad.
-addErrAtTc :: SrcSpan -> [GhcHint] -> SDoc -> TcPluginM ()
+addErrAtTc :: MonadTcPlugin m => SrcSpan -> [GhcHint] -> SDoc -> m ()
 addErrAtTc loc hints
-  = unsafeTcPluginTcM
+  = unsafeLiftTcM
   . addErrAt loc
   . TcRnUnknownMessage
   . mkSimpleUnknownDiagnostic
