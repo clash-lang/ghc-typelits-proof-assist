@@ -2,9 +2,63 @@
 {- | The 'QED' class and a custom dictionary type to be used to
    interface with the plugin.
 -}
-module GHC.TypeNats.Proof where
+module GHC.TypeNats.Proof
+  ( Rewrite(..)
+  , QED(..)
+    -- * Supported Operators (re-exported)
+  , NonZero
+  , type (<)
+  , type (<=)
+  , type (>)
+  , type (>=)
+  , type (==)
+  , type (<?)
+  , type (<=?)
+  , type (>?)
+  , type (>=?)
+  , type (+)
+  , type (-)
+  , type (*)
+  , type (^)
+  , type (&&)
+  , type (||)
+  , Not
+  , If
+  , Div
+  , Mod
+  , Min
+  , Max
+  , Log
+  , CLog
+  , FLog
+  , Log2
+  , CLog2
+  , FLog2
+  , GCD
+  , LCM
+    -- * Other re-exports
+  , Constraint
+  )
+  where
 
 import Data.Kind (Constraint)
+import Data.Type.Bool (type (&&), type (||), Not, If)
+import Data.Type.Equality (type (==))
+import Data.Type.Ord
+  ( type (<), type (<=), type (>), type (>=)
+  , type (<?), type (<=?), type (>?), type (>=?)
+  )
+import GHC.TypeNats (type (+), type (-), type (*), type (^), Div, Mod, Log2)
+import GHC.TypeLits.Extra (Min, Max, Log, CLog, FLog, GCD, LCM)
+
+-- | Type alias for 'CLog' with base two.
+type CLog2 n = CLog 2 n
+
+-- | Type alias for 'FLog' with base two.
+type FLog2 n = FLog 2 n
+
+-- | Type alias for non-zero number constraints.
+type NonZero n = 1 <= n
 
 -- | The plugin-specific dictionary type, where we offer our own
 -- definition at this point to support availability of the plugin to

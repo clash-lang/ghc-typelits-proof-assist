@@ -31,7 +31,7 @@ flag examples
   default: False
   manual: True
 
-common shared
+common common-options
   default-language: GHC2024
   ghc-options: -Wall -Wcompat
   default-extensions:
@@ -45,7 +45,7 @@ common shared
     , base >= 4.20 && < 4.21
 
 library
-  import: shared
+  import: common-options
   hs-source-dirs: src
   exposed-modules:
     GHC.TypeNats.Proof
@@ -70,7 +70,7 @@ library
     , transformers
 
 library examples
-  import: shared
+  import: common-options
   hs-source-dirs: examples
   if !flag(examples)
     buildable: False
@@ -82,3 +82,19 @@ library examples
     Intro
     Intro.CoqProof
     Intro.AgdaProof
+
+test-suite compile
+  import: common-options
+  hs-source-dirs: tests
+  type: exitcode-stdio-1.0
+  ghc-options:
+    -threaded
+    -fplugin=GHC.TypeNats.Proof.Plugin
+    -fplugin-opt=GHC.TypeNats.Proof.Plugin:VerifyProofs=True
+  main-is: Main.hs
+  other-modules:
+    Test.GHC.TypeNats.Proof.Plugin.Agda
+    Test.GHC.TypeNats.Proof.Plugin.Coq
+  build-depends:
+    , base
+    , ghc-typelits-proof-assist
