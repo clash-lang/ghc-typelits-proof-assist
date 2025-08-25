@@ -21,8 +21,8 @@ changes in the way how the plugin works._
 ## How does it work?
 
 The plugin works as an interface between GHC and a chosen external prover. The
-currently supported proof assistants are [Agda](https://github.com/agda/agda)
-and [Rocq](https://rocq-prover.org).
+currently supported proof assistants are [Agda](https://github.com/agda/agda),
+[Rocq](https://rocq-prover.org) and [Lean](https://lean-lang.org).
 
 ### Teaching Haskell about proofs
 

@@ -7,6 +7,7 @@ module GHC.TypeNats.Proof.Plugin.Prover.Tynal
   , FixityDirection(..)
   , Fixity(..)
   , ProverFixities(..)
+  , ProverEnv(..)
   , ProverConfig(..)
   , FromType(..)
   , specializeTerm
@@ -32,11 +33,13 @@ import GHC.Core.TyCo.Rep (Type(..), TyLit(..), FunTyFlag(..), ForAllTyFlag(..))
 import GHC.Core.Type (isTypeLikeKind, typeKind, mkTyConApp)
 import GHC.Data.FastString (FastString)
 import GHC.Plugins (getOccString)
+import GHC.Records (HasField(..))
 import GHC.TypeNats (Nat)
 import GHC.Types.Name (NamedThing(..))
 import GHC.Types.Var (VarBndr(..), TyVar, tyVarKind)
 import GHC.Utils.Outputable
   (Outputable(..), SDoc, (<+>), (<>), pprWithCommas, parens, colon, hsep, dot)
+import System.FilePath ((</>))
 
 import qualified Data.String.Combinators as S ((<+>), parens)
 
@@ -126,6 +129,17 @@ data Fixity
   = Fixity Int FixityDirection LexicalFixity
   deriving (Eq)
 
+data ProverEnv = ProverEnv
+  { -- | the base directory specific to the prover
+    proverDir :: FilePath
+  , -- | the relative path for the module
+    moduleDir :: FilePath
+  }
+
+-- | the full directory path specific to a prover and module
+instance HasField "dir" ProverEnv FilePath where
+  getField ProverEnv { .. } = proverDir </> moduleDir
+
 -- | The class defines the interface for translation and verification
 -- of Tynal terms with a proof assistant.
 class ProverFixities p => ProverConfig p s where
@@ -158,8 +172,8 @@ class ProverFixities p => ProverConfig p s where
   -- | the verification backend
   verify ::
     p ->
-    -- | proof directory (must exist)
-    FilePath ->
+    -- | proof directories
+    ProverEnv ->
     -- | proof preamble
     [FastString] ->
     -- | proof signature

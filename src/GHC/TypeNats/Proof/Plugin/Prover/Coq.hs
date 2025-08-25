@@ -91,9 +91,9 @@ instance (IsString s, Monoid s) => ProverConfig Coq s where
       tyk = tyVarKind x
       var = fromString $ getOccString x
 
-  verify p dir preamble sig@Signature{..} proof = do
+  verify p env preamble sig@Signature{..} proof = do
     -- Write the proof to the file
-    writeFile (dir </> fileName) $ unlines $
+    writeFile (env.dir </> fileName) $ unlines $
       [ ("Require Import" <+> imp) <> "."
       | imp <- "Coq.Init.Peano" : requiredImports p sig
       , not $ null imp
@@ -108,7 +108,7 @@ instance (IsString s, Monoid s) => ProverConfig Coq s where
       ]
     -- Run the proof in Coq
     findExecutable "coqc" >>= \case
-      Just coqc -> withCurrentDirectory dir $ do
+      Just coqc -> withCurrentDirectory env.dir $ do
         (exitCode, _, output) <- readProcessWithExitCode coqc [fileName] ""
         if exitCode == ExitSuccess then
           return Nothing

@@ -37,6 +37,7 @@ common common-options
   default-extensions:
     MultiWayIf
     NoStarIsType
+    OverloadedRecordDot
     OverloadedStrings
     RecordWildCards
     TypeFamilies
@@ -59,6 +60,7 @@ library
     GHC.TypeNats.Proof.Plugin.Prover.Tynal
     GHC.TypeNats.Proof.Plugin.Prover.Agda
     GHC.TypeNats.Proof.Plugin.Prover.Coq
+    GHC.TypeNats.Proof.Plugin.Prover.Lean
   build-depends:
     , containers
     , directory
@@ -82,6 +84,7 @@ library examples
     Intro
     Intro.CoqProof
     Intro.AgdaProof
+    Intro.LeanProof
 
 test-suite compile
   import: common-options
@@ -95,6 +98,7 @@ test-suite compile
   other-modules:
     Test.GHC.TypeNats.Proof.Plugin.Agda
     Test.GHC.TypeNats.Proof.Plugin.Coq
+    Test.GHC.TypeNats.Proof.Plugin.Lean
   build-depends:
     , base
     , ghc-typelits-proof-assist
