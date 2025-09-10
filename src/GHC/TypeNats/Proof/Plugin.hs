@@ -16,7 +16,7 @@ import Data.Maybe (isJust, catMaybes, mapMaybe)
 import Data.Monoid (First(..))
 import Data.String (IsString(..))
 import GHC.Builtin.Types
-  ( cTupleTyCon, cTupleDataCon, naturalTy
+  ( cTupleTyCon, cTupleDataCon, naturalTy, constraintKindTyConName
   , promotedTrueDataCon, promotedFalseDataCon
   )
 import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
@@ -169,7 +169,7 @@ checkProofComments ::
 checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
   knownTypes <- lookupKnownTypes
   ufm <- readTcRef gref >>= foldM checkedAdd emptyUFM . either id noShare
-  let fpcs = filteredProofComments ufm knownTypes
+  let fpcs = filteredProofComments ufm
   writeTcRef gref $ Right (knownTypes, fpcs)
   unused <- forM (noMatchingClassProofComments ufm fpcs)
     $ \ProofComment{..} -> newNameAt (mkVarOccFS pcName) pcLocation
@@ -188,7 +188,7 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
         $ n' :| [n]
       return ufm
 
-  filteredProofComments ufm knownTypes = (`mapMaybe` hs_tyclds) $ \case
+  filteredProofComments ufm = (`mapMaybe` hs_tyclds) $ \case
     TyClGroup{..}
       | -- check that there is a matching class name
         [ClassDecl{..}] <- unLoc <$> group_tyclds
@@ -230,7 +230,7 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
       HsBangTy _ _ ty  -> hasConstraintResult $ unLoc ty
       HsFunTy _ _ _ ty -> hasConstraintResult $ unLoc ty
       HsAppTy _ ty _   -> hasConstraintResult $ unLoc ty
-      HsTyVar _ _ n    -> unLoc n == getName (ktConstraint knownTypes)
+      HsTyVar _ _ n    -> unLoc n == constraintKindTyConName
       _                -> False
 
     getInstName = \case

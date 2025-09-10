@@ -105,9 +105,10 @@ hasProof kt ie@InstEnvs{..} proofComment@ProofComment{..} = do
       return Nothing
     [proofInstance@ClsInst{..}] -> do
       let iloc = getSrcSpan proofInstance
+          fromSig = partitionEithers . fmap (fmap specializeTerm . fromType kt)
           (noVs, sig@Signature{..}) = tySignature proofClass proofInstance
-          (noWs, premise) = partitionEithers $ fromType kt <$> sigPremise
-          (noGs, conclusion) = partitionEithers $ fromType kt <$> sigConclusion
+          (noWs, premise) = fromSig sigPremise
+          (noGs, conclusion) = fromSig sigConclusion
           proofSignature = sig
             { sigPremise = premise
             , sigConclusion = conclusion

@@ -36,9 +36,11 @@ instance Uniquable Prover where
 instance (IsString s, Monoid s) => ProverConfig Prover s where
   proverName p      | HasCfg c <- hasConfig @s p = proverName c
   operatorImports p | HasCfg c <- hasConfig @s p = operatorImports c
-  printLit p        | HasCfg c <- hasConfig @s p = printLit c
+  printBool p       | HasCfg c <- hasConfig @s p = printBool c
+  printNat p        | HasCfg c <- hasConfig @s p = printNat c
   printVar p        | HasCfg c <- hasConfig @s p = printVar c
   printOp p         | HasCfg c <- hasConfig @s p = printOp c
+  printTerm p t     | HasCfg c <- hasConfig @s p = printTerm c t
   printSignature p  | HasCfg c <- hasConfig @s p = printSignature c
   verify p          | HasCfg c <- hasConfig @s p = verify c
 
