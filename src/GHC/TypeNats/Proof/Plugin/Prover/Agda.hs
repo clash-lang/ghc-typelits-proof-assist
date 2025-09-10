@@ -78,9 +78,9 @@ instance (IsString s, Monoid s) => ProverConfig Agda s where
       Op NZero `S` Var v -> Left v
       x -> Right x
 
-  verify p dir preamble sig@Signature{..} proof = do
+  verify p env preamble sig@Signature{..} proof = do
     -- Write the proof to the file
-    writeFile (dir </> fileName) $ unlines $
+    writeFile (env.dir </> fileName) $ unlines $
       [ "open import" <+> imp
       | imp <- requiredImports p sig
       , not $ null imp
@@ -95,7 +95,7 @@ instance (IsString s, Monoid s) => ProverConfig Agda s where
 
     -- Run the proof in Coq
     findExecutable "agda" >>= \case
-      Just agda -> withCurrentDirectory dir $ do
+      Just agda -> withCurrentDirectory env.dir $ do
         (exitCode, output, _) <- readProcessWithExitCode agda [fileName] ""
         if exitCode == ExitSuccess then
           return Nothing

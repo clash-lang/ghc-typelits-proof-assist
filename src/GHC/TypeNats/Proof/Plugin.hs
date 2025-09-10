@@ -279,11 +279,13 @@ pluginSolve PluginConfig{..} kt@KnownTypes{..} proofs _ev givens wanteds = do
   if not (null proofWs) then do
     evs <- (`mapMaybeM` proofWs) $ \(Proof{..}, ct) -> do
       let ProofComment{..} = proofComment
-          dir = proofDir </> show pcProver </> moduleNameSlashes moduleName
+          proverDir = proofDir </> show pcProver
+          moduleDir = moduleNameSlashes moduleName
+          env = ProverEnv { proverDir, moduleDir }
       result <- tcPluginIO $
         if verifyProofs then do
-          createDirectoryIfMissing True dir
-          verify pcProver dir pcPreamble proofSignature pcProof
+          createDirectoryIfMissing True (proverDir </> moduleDir)
+          verify pcProver env pcPreamble proofSignature pcProof
         else
           return Nothing
       case result of
