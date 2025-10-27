@@ -1,5 +1,6 @@
-{ pkgs }:
+{ pkgs, lib }:
 let
+  inherit (lib) callHackageRevision;
   inherit (pkgs.haskell.lib) dontCheck dontBenchmark;
 
   cabalSrc = pkgs.fetchFromGitHub {
@@ -32,20 +33,6 @@ let
     rev    = "5b257704f21110fb5f1faa32a679025966144635";
     sha256 = "sha256-puyzSyfhXA5ICdoC3NeiPpQqCKdw+Nb4I+IFRcUoPnM=";
   };
-
-  callHackageRevision = oldpkgs: args:
-    let orev = drv: {
-          revision = args.revision;
-          editedCabalFile = args.editedCabalFile;
-        };
-        meta = oldpkgs.callHackageDirect {
-          pkg = args.pkg;
-          ver = args.ver;
-          sha256 = args.sha256;
-        } {};
-     in dontCheck (dontBenchmark (
-          pkgs.haskell.lib.compose.overrideCabal orev meta
-        ));
 
   fromCabalSources = oldpkgs: pkg: dontCheck ( dontBenchmark (
     oldpkgs.callCabal2nix pkg (cabalSrc + "/" + pkg) {}

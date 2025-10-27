@@ -68,7 +68,7 @@ library
     , filepath
     , ghc >= 9.10 && < 9.14
     , ghc-typelits-extra
-    , ghc-tcplugin-api
+    , ghc-tcplugin-api >= 0.18 && < 0.19
     , process
     , string-combinators
     , transformers
