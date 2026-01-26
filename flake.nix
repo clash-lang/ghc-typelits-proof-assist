@@ -12,8 +12,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lib = import ./nix/lib.nix { inherit pkgs; };
 
-        ghcVersions = [ "ghc910" "ghc9121" ];
-        defaultGhcVersion = "ghc910";
+        ghcVersions = [ "ghc9103" "ghc9123" ];
+        defaultGhcVersion = "ghc9103";
 
         makeOverlay = compilerVersion:
           let
@@ -22,10 +22,10 @@
             ghc-tcplugin-api =
               lib.callHackageRevision hsPkgs {
                 pkg = "ghc-tcplugin-api";
-                ver = "0.18.1.0";
+                ver = "0.18.2.0";
                 revision = "0";
-                sha256 = "sha256-VE1IDANndcIswnmdgkEwYIqdnFIhwqe12hDPxpLpSQo=";
-                editedCabalFile = "sha256-KJ2NO27XM6kzqlGNSD3V+76WQg452ppYhidXpvqkdso=";
+                sha256 = "sha256-xyXN5AzcE8jAcZ8bN0RGfw65HgNVTrEOLkqV4uiW3PA=";
+                editedCabalFile = "sha256-EmsLFtVrXss7Wj3XThWBYZIIYE2J248JvBvbqVoIuPI=";
               };
 
             overrides = _: _: {
