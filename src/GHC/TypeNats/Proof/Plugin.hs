@@ -7,6 +7,7 @@ module GHC.TypeNats.Proof.Plugin (plugin) where
 
 import Control.Applicative ((<|>))
 import Control.Monad (foldM, forM_, forM,)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict
   (StateT, execStateT, get, put, gets, modify)
@@ -21,7 +22,7 @@ import GHC.TcPlugin.API
   , EvTerm(..), Expr(..), EqRel(..), Role(..), Ct, TcGblEnv, PredType
   , Coercion, UniqFM, Id, Name, FastString, SDoc
   , pattern EqPred, pattern IrredPred
-  , mkTcPlugin, tcPluginIO, tcLookupTyCon, tcLookupClass, mkNonCanonical
+  , mkTcPlugin, tcLookupTyCon, tcLookupClass, mkNonCanonical
   , mkPluginUnivCo,  mkTyConApp, readTcRef, writeTcRef, getInstEnvs
   , ctLoc, ctOrigin, ctPred, ppr, unLoc, emptyUFM, listToUFM, evCast
   , newWanted, classifyPredType, eqType
@@ -129,17 +130,17 @@ plugin = defaultPlugin
                     )
                 ]
             unsafeLiftTcM failIfErrsM
-            tcPluginIO exitFailure
+            liftIO exitFailure
           Right cfg -> do
-            pref <- tcPluginIO $ newTcRef Nothing
+            pref <- liftIO $ newTcRef Nothing
             return (cfg, pref, gref)
       , tcPluginSolve = \(cfg, pref, sref) gs ws -> do
           -- skip the simplification phase
           if null ws then return $ TcPluginOk [] []
           else do
-            (kt, proofs) <- tcPluginIO (readTcRef pref) >>= \case
+            (kt, proofs) <- liftIO (readTcRef pref) >>= \case
               Just x  -> return x
-              Nothing -> tcPluginIO (readTcRef sref) >>= \case
+              Nothing -> liftIO (readTcRef sref) >>= \case
                 Left _ -> noShare
                 Right (kt, proofComments) -> do
                   ie <- getInstEnvs
@@ -149,7 +150,7 @@ plugin = defaultPlugin
                   -- fail, if errors have been encountered
                   unsafeLiftTcM failIfErrsM
                   -- otherwise store the result to be re-used
-                  tcPluginIO $ writeTcRef pref $ Just (kt, proofs)
+                  liftIO $ writeTcRef pref $ Just (kt, proofs)
                   return (kt, proofs)
             pluginSolve cfg kt proofs gs ws
       , tcPluginRewrite = const emptyUFM
@@ -286,7 +287,7 @@ pluginSolve PluginConfig{..} kt@KnownTypes{..} proofs givens wanteds = do
           proverDir = proofDir </> show pcProver
           moduleDir = moduleNameSlashes moduleName
           env = ProverEnv { proverDir, moduleDir }
-      result <- tcPluginIO $
+      result <- liftIO $
         if verifyProofs then do
           createDirectoryIfMissing True (proverDir </> moduleDir)
           verify pcProver env pcPreamble proofSignature pcProof
@@ -483,7 +484,7 @@ addEvidence ct = ( , ct) <$> case classifyPredType $ ctPred ct of
   IrredPred ty1
     -> let ty0 = mkTyConApp (cTupleTyCon 0) []
            dcApp = evId $ dataConWrapId $ cTupleDataCon 0
-        in return $ evCast dcApp $ mkUnivCoP Representational ty0 ty1
+        in return $ EvExpr $ evCast dcApp $ mkUnivCoP Representational ty0 ty1
   _ -> Nothing
  where
   mkUnivCoP :: Role -> Type -> Type -> Coercion
