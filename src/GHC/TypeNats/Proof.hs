@@ -1,3 +1,5 @@
+{-# LANGUAGE NoGeneralizedNewtypeDeriving #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {- | The 'QED' class and a custom dictionary type to be used to
    interface with the plugin.
