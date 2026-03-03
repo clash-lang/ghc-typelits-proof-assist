@@ -33,37 +33,38 @@ import qualified GHC.TypeNats.Proof
 -- | The known Tynal operators.
 infixr ~>
 data a ~> b where
-  NZero :: Nat ~> Constraint
-  EqC   :: a ~> a ~> Constraint
-  LtC   :: Nat ~> Nat ~> Constraint
-  LeC   :: Nat ~> Nat ~> Constraint
-  GtC   :: Nat ~> Nat ~> Constraint
-  GeC   :: Nat ~> Nat ~> Constraint
-  EqB   :: a ~> a ~> Bool
-  LtB   :: Nat ~> Nat ~> Bool
-  LeB   :: Nat ~> Nat ~> Bool
-  GtB   :: Nat ~> Nat ~> Bool
-  GeB   :: Nat ~> Nat ~> Bool
-  And   :: Bool ~> Bool ~> Bool
-  Or    :: Bool ~> Bool ~> Bool
-  Not   :: Bool ~> Bool
-  If    :: Bool ~> a ~> a ~> a
-  Add   :: Nat ~> Nat ~> Nat
-  Sub   :: Nat ~> Nat ~> Nat
-  Mul   :: Nat ~> Nat ~> Nat
-  Exp   :: Nat ~> Nat ~> Nat
-  Div   :: Nat ~> Nat ~> Nat
-  Mod   :: Nat ~> Nat ~> Nat
-  Log2  :: Nat ~> Nat
-  CLog2 :: Nat ~> Nat
-  FLog2 :: Nat ~> Nat
-  Min   :: Nat ~> Nat ~> Nat
-  Max   :: Nat ~> Nat ~> Nat
-  Log   :: Nat ~> Nat ~> Nat
-  FLog  :: Nat ~> Nat ~> Nat
-  CLog  :: Nat ~> Nat ~> Nat
-  GCD   :: Nat ~> Nat ~> Nat
-  LCM   :: Nat ~> Nat ~> Nat
+  NZero  :: Nat ~> Constraint
+  EqC    :: a ~> a ~> Constraint
+  LtC    :: Nat ~> Nat ~> Constraint
+  LeC    :: Nat ~> Nat ~> Constraint
+  GtC    :: Nat ~> Nat ~> Constraint
+  GeC    :: Nat ~> Nat ~> Constraint
+  EqB    :: a ~> a ~> Bool
+  LtB    :: Nat ~> Nat ~> Bool
+  LeB    :: Nat ~> Nat ~> Bool
+  GtB    :: Nat ~> Nat ~> Bool
+  GeB    :: Nat ~> Nat ~> Bool
+  And    :: Bool ~> Bool ~> Bool
+  Or     :: Bool ~> Bool ~> Bool
+  Not    :: Bool ~> Bool
+  If     :: Bool ~> a ~> a ~> a
+  Add    :: Nat ~> Nat ~> Nat
+  Sub    :: Nat ~> Nat ~> Nat
+  Mul    :: Nat ~> Nat ~> Nat
+  Exp    :: Nat ~> Nat ~> Nat
+  Div    :: Nat ~> Nat ~> Nat
+  Mod    :: Nat ~> Nat ~> Nat
+  Log2   :: Nat ~> Nat
+  CLog2  :: Nat ~> Nat
+  FLog2  :: Nat ~> Nat
+  Min    :: Nat ~> Nat ~> Nat
+  Max    :: Nat ~> Nat ~> Nat
+  Log    :: Nat ~> Nat ~> Nat
+  FLog   :: Nat ~> Nat ~> Nat
+  CLog   :: Nat ~> Nat ~> Nat
+  CLogWZ :: Nat ~> Nat ~> Nat ~> Nat
+  GCD    :: Nat ~> Nat ~> Nat
+  LCM    :: Nat ~> Nat ~> Nat
 
 deriving stock instance Eq   (a ~> b)
 deriving stock instance Ord  (a ~> b)
@@ -91,11 +92,11 @@ data KnownTypes = KnownTypes
 instance Outputable KnownTypes where
   ppr KnownTypes{..} =
     ("KnownTypes" <+>) $ braces $ ("" <+>) $ (<+> "") $ pprWithCommas id
-      [ ppr ktAssert, ppr ktOrdCond, pOp EqC,  pOp LtC,   pOp LeC,  pOp GtC
-      , pOp GeC, pOp EqB, pOp LtB,   pOp LeB,  pOp GtB,   pOp GeB,  pOp NZero
-      , pOp And, pOp Or,  pOp Not,   pOp If,   pOp Add,   pOp Sub,  pOp Log2
-      , pOp Div, pOp Mod, pOp Mul,   pOp Exp,  pOp Min,   pOp Max,  pOp Log
-      , pOp GCD, pOp LCM, pOp FLog,  pOp CLog, pOp FLog2, pOp CLog2
+      [ ppr ktAssert, ppr ktOrdCond, pOp EqC,  pOp LtC,    pOp LeC,   pOp GtC
+      , pOp GeC, pOp EqB, pOp LtB,   pOp LeB,  pOp GtB,    pOp GeB,   pOp NZero
+      , pOp And, pOp Or,  pOp Not,   pOp If,   pOp Add,    pOp Sub,   pOp Log2
+      , pOp Div, pOp Mod, pOp Mul,   pOp Exp,  pOp Min,    pOp Max,   pOp Log
+      , pOp GCD, pOp LCM, pOp FLog,  pOp CLog, pOp CLogWZ, pOp FLog2, pOp CLog2
       ]
    where
     pOp :: forall a b. (a ~> b) -> SDoc
@@ -142,6 +143,10 @@ instance FromTyCon (Nat ~> Nat ~> Nat) where
         , FLog, CLog, Log, GCD, LCM
         ]
 
+instance FromTyCon (Nat ~> Nat ~> Nat ~> Nat) where
+  fromTyCon KnownTypes{..} = lookupUFM $ listToUFM $ (\x -> (kOp x, x))
+    <$> [ CLogWZ ]
+
 -- | Retrieves the missing 'TyCon's that are not exposed via the GHC API.
 lookupKnownTypes :: TcM KnownTypes
 lookupKnownTypes = do
@@ -171,6 +176,7 @@ lookupKnownTypes = do
   logTyCon     <- lkup ''GHC.TypeLits.Extra.Log
   flogTyCon    <- lkup ''GHC.TypeLits.Extra.FLog
   clogTyCon    <- lkup ''GHC.TypeLits.Extra.CLog
+  clogwzTyCon  <- lkup ''GHC.TypeLits.Extra.CLogWZ
   gcdTyCon     <- lkup ''GHC.TypeLits.Extra.GCD
   lcmTyCon     <- lkup ''GHC.TypeLits.Extra.LCM
   clog2TyCon   <- lkup ''GHC.TypeNats.Proof.CLog2
@@ -178,17 +184,17 @@ lookupKnownTypes = do
   let
     kOp :: forall a b. a ~> b -> TyCon
     kOp = \case
-      Add  -> typeNatAddTyCon  ;  EqC -> eqTyCon   ;  NZero -> nZeroTyCon
-      Sub  -> typeNatSubTyCon  ;  LtC -> ltCTyCon  ;  LCM   -> lcmTyCon
-      Mul  -> typeNatMulTyCon  ;  LeC -> leCTyCon  ;  GCD   -> gcdTyCon
-      Exp  -> typeNatExpTyCon  ;  GtC -> gtCTyCon  ;  CLog  -> clogTyCon
-      Div  -> typeNatDivTyCon  ;  GeC -> geCTyCon  ;  FLog  -> flogTyCon
-      Mod  -> typeNatModTyCon  ;  EqB -> eqBTyCon  ;  CLog2 -> clog2TyCon
-      Log2 -> typeNatLogTyCon  ;  LtB -> ltBTyCon  ;  FLog2 -> flog2TyCon
-      If   -> ifTyCon          ;  LeB -> leBTyCon  ;  Log   -> logTyCon
-      And  -> andTyCon         ;  GtB -> gtBTyCon  ;  Min   -> minTyCon
-      Or   -> orTyCon          ;  GeB -> geBTyCon  ;  Max   -> maxTyCon
-      Not  -> notTyCon
+      Add  -> typeNatAddTyCon  ;  EqC -> eqTyCon   ;  NZero  -> nZeroTyCon
+      Sub  -> typeNatSubTyCon  ;  LtC -> ltCTyCon  ;  LCM    -> lcmTyCon
+      Mul  -> typeNatMulTyCon  ;  LeC -> leCTyCon  ;  GCD    -> gcdTyCon
+      Exp  -> typeNatExpTyCon  ;  GtC -> gtCTyCon  ;  CLog   -> clogTyCon
+      Div  -> typeNatDivTyCon  ;  GeC -> geCTyCon  ;  CLogWZ -> clogwzTyCon
+      Mod  -> typeNatModTyCon  ;  EqB -> eqBTyCon  ;  FLog   -> flogTyCon
+      Log2 -> typeNatLogTyCon  ;  LtB -> ltBTyCon  ;  CLog2  -> clog2TyCon
+      If   -> ifTyCon          ;  LeB -> leBTyCon  ;  FLog2  -> flog2TyCon
+      And  -> andTyCon         ;  GtB -> gtBTyCon  ;  Min    -> minTyCon
+      Or   -> orTyCon          ;  GeB -> geBTyCon  ;  Max    -> maxTyCon
+      Not  -> notTyCon         ;  Log -> logTyCon
 
   return KnownTypes{..}
  where

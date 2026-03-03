@@ -170,3 +170,24 @@ class
 T15 (suc _) = refl
 /-}
 instance T15 n => QED (T15 n)
+
+instance
+  ( 2 <= n
+  ) => T16 n
+class
+  ( 1 <= CLogWZ 2 n 0
+  ) => T16 n
+{-/ Proof (Agda): T16
+open import Relation.Nullary.Negation.Core using (contradiction)
+open import Data.Nat.Properties using (m+1+n≰m; ≤-trans; n≤1+n)
+T16 (suc n) 2≤n = >-nonZero (lemma (suc n) 2≤n)
+ where
+  lemma : (n : ℕ) → 2 ≤ n → 1 ≤ ⌈log₂_⌉ n
+  lemma (suc zero) 2≤n = contradiction (s≤s⁻¹ 2≤n) (m+1+n≰m 0)
+  lemma (suc (suc zero)) 2≤n = s≤s z≤n
+  lemma (suc (suc (suc n))) 2≤n =
+    ≤-trans
+      (lemma (suc (suc n)) (s≤s (s≤s z≤n)))
+      (⌈log₂⌉-mono-≤ (n≤1+n ((suc (suc n)))))
+/-}
+instance T16 n => QED (T16 n)

@@ -37,6 +37,7 @@ instance (IsString s, Monoid s) => ProverConfig Lean s where
     Not   -> ""  ;  Log   -> "Mathlib.Data.Nat.Log"
     If    -> ""  ;  CLog  -> "Mathlib.Data.Nat.Log"
     FLog  -> "Mathlib.Data.Nat.Log"
+    CLogWZ -> "NO PRIMITIVE"
 
   printBool _ = \case
     True  -> "true"
@@ -52,6 +53,7 @@ instance (IsString s, Monoid s) => ProverConfig Lean s where
     Log2  -> "Nat.log2"  ;  FLog2 -> "Nat.log2"  ;  CLog2 -> "Nat.clog 2"
     Mod   -> "%"         ;  GCD   -> "Nat.gcd"   ;  LCM   -> "Nat.lcm"
     NZero -> "0 ≠"       ;  Min   -> "min"       ;  Max   -> "max"
+    CLogWZ -> "NO PRIMITIVE"
 
   printTerm p = \case
     Op If `S` t0 `S` t1 `S` t2 ->
@@ -120,16 +122,17 @@ instance ProverFixities Lean where
   -- being a ternary operator, is always parenthesized anyway.
 
   bOpFixity _ = \case
-    EqB  -> Fixity 50   InfixN Infix   ;  LtB  -> Fixity 90   InfixL Prefix
-    LeB  -> Fixity 90   InfixL Prefix  ;  GtB  -> Fixity 90   InfixL Prefix
-    GeB  -> Fixity 90   InfixL Prefix  ;  EqC  -> Fixity 50   InfixN Infix
-    LtC  -> Fixity 50   InfixN Infix   ;  LeC  -> Fixity 50   InfixN Infix
-    GtC  -> Fixity 50   InfixN Infix   ;  GeC  -> Fixity 50   InfixN Infix
-    And  -> Fixity 35   InfixL Infix   ;  Or   -> Fixity 30   InfixL Infix
-    If   -> Fixity 1022 InfixL Prefix  ;  Add  -> Fixity 65   InfixL Infix
-    Sub  -> Fixity 65   InfixL Infix   ;  Mul  -> Fixity 70   InfixL Infix
-    Exp  -> Fixity 80   InfixR Infix   ;  Div  -> Fixity 70   InfixL Infix
-    Mod  -> Fixity 70   InfixL Infix   ;  Min  -> Fixity 90   InfixL Prefix
-    Max  -> Fixity 90   InfixL Prefix  ;  FLog -> Fixity 90   InfixL Prefix
-    Log  -> Fixity 90   InfixL Prefix  ;  CLog -> Fixity 90   InfixL Prefix
-    GCD  -> Fixity 90   InfixL Prefix  ;  LCM  -> Fixity 90   InfixL Prefix
+    EqB  -> Fixity 50   InfixN Infix   ;  LtB    -> Fixity 90 InfixL Prefix
+    LeB  -> Fixity 90   InfixL Prefix  ;  GtB    -> Fixity 90 InfixL Prefix
+    GeB  -> Fixity 90   InfixL Prefix  ;  EqC    -> Fixity 50 InfixN Infix
+    LtC  -> Fixity 50   InfixN Infix   ;  LeC    -> Fixity 50 InfixN Infix
+    GtC  -> Fixity 50   InfixN Infix   ;  GeC    -> Fixity 50 InfixN Infix
+    And  -> Fixity 35   InfixL Infix   ;  Or     -> Fixity 30 InfixL Infix
+    If   -> Fixity 1022 InfixL Prefix  ;  Add    -> Fixity 65 InfixL Infix
+    Sub  -> Fixity 65   InfixL Infix   ;  Mul    -> Fixity 70 InfixL Infix
+    Exp  -> Fixity 80   InfixR Infix   ;  Div    -> Fixity 70 InfixL Infix
+    Mod  -> Fixity 70   InfixL Infix   ;  Min    -> Fixity 90 InfixL Prefix
+    Max  -> Fixity 90   InfixL Prefix  ;  FLog   -> Fixity 90 InfixL Prefix
+    Log  -> Fixity 90   InfixL Prefix  ;  CLog   -> Fixity 90 InfixL Prefix
+    GCD  -> Fixity 90   InfixL Prefix  ;  CLogWZ -> Fixity 90 InfixL Prefix
+    LCM  -> Fixity 90   InfixL Prefix
