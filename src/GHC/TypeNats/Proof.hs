@@ -32,6 +32,7 @@ module GHC.TypeNats.Proof
   , Max
   , Log
   , CLog
+  , CLogWZ
   , FLog
   , Log2
   , CLog2
@@ -51,7 +52,7 @@ import Data.Type.Ord
   , type (<?), type (<=?), type (>?), type (>=?)
   )
 import GHC.TypeNats (type (+), type (-), type (*), type (^), Div, Mod, Log2)
-import GHC.TypeLits.Extra (Min, Max, Log, CLog, FLog, GCD, LCM)
+import GHC.TypeLits.Extra (Min, Max, Log, CLog, CLogWZ, FLog, GCD, LCM)
 
 -- | Type alias for 'CLog' with base two.
 type CLog2 n = CLog 2 n

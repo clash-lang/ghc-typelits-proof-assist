@@ -67,7 +67,7 @@ library
     , directory
     , filepath
     , ghc >= 9.10 && < 9.14
-    , ghc-typelits-extra
+    , ghc-typelits-extra >= 0.5.2 && < 0.6
     , ghc-tcplugin-api >= 0.18 && < 0.19
     , process
     , string-combinators

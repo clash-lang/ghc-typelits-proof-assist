@@ -196,3 +196,17 @@ class
   simp [Nat.zero_mod]
 /-}
 instance T16 n => QED (T16 n)
+
+instance T17 n
+class
+  ( CLogWZ 2 (2 ^ n) 0 ~ n
+  ) => T17 n
+{-/ Proof (Lean): T17
+  cases n with
+  | zero => simp
+  | succ n =>
+      have rule : (2 ^ (n + 1) == 0) = false := by simp
+      rw [rule]
+      exact Nat.clog_pow 2 (n + 1) (hb := by decide)
+/-}
+instance T17 n => QED (T17 n)

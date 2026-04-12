@@ -19,19 +19,6 @@
           let
             hsPkgs = pkgs.haskell.packages.${compilerVersion};
 
-            ghc-tcplugin-api =
-              lib.callHackageRevision hsPkgs {
-                pkg = "ghc-tcplugin-api";
-                ver = "0.18.2.0";
-                revision = "0";
-                sha256 = "sha256-xyXN5AzcE8jAcZ8bN0RGfw65HgNVTrEOLkqV4uiW3PA=";
-                editedCabalFile = "sha256-EmsLFtVrXss7Wj3XThWBYZIIYE2J248JvBvbqVoIuPI=";
-              };
-
-            overrides = _: _: {
-              inherit ghc-tcplugin-api;
-            };
-
             ghcOverrideFile = ./. + "/nix/override-${compilerVersion}.nix";
 
             ghcOverrides =
@@ -44,7 +31,7 @@
               ghc-typelits-proof-assist = ./.;
             };
           in
-            ((hsPkgs.extend overrides).extend ghcOverrides).extend pkgSrcOverrides;
+            (hsPkgs.extend ghcOverrides).extend pkgSrcOverrides;
 
         overlays = nixpkgs.lib.attrsets.genAttrs ghcVersions makeOverlay;
 

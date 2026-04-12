@@ -82,14 +82,14 @@ instance Outputable (Term a) where
    where
     pprOp :: (b ~> c) -> SDoc
     pprOp = \case
-      NZero -> "(1 <=)"  ;  EqC  -> "(~)"   ;  LtC -> "(<)"    ;  LeC -> "(<=)"
-      GtC   -> "(>)"     ;  GeC  -> "(>=)"  ;  EqB -> "(==)"   ;  LtB -> "(<?)"
-      LeB   -> "(<=?)"   ;  GtB  -> "(>?)"  ;  GeB -> "(>=?)"  ;  And -> "(&&)"
-      Or    -> "(||)"    ;  Not  -> "Not"   ;  If  -> "If"     ;  Add -> "(+)"
-      Sub   -> "(-)"     ;  Mul  -> "(*)"   ;  Exp -> "(^)"    ;  Div -> "(/)"
-      Mod   -> "Mod"     ;  Log2 -> "Log2"  ;  Min -> "Min"    ;  Max -> "Max"
-      CLog2 -> "CLog2"   ;  FLog -> "FLog"  ;  GCD -> "GCD"    ;  LCM -> "LCM"
-      FLog2 -> "FLog2"   ;  CLog -> "CLog"  ;  Log -> "Log"
+      NZero  -> "(1 <=)"  ;  EqC  -> "(~)"   ;  LtC -> "(<)"    ;  LeC -> "(<=)"
+      GtC    -> "(>)"     ;  GeC  -> "(>=)"  ;  EqB -> "(==)"   ;  LtB -> "(<?)"
+      LeB    -> "(<=?)"   ;  GtB  -> "(>?)"  ;  GeB -> "(>=?)"  ;  And -> "(&&)"
+      Or     -> "(||)"    ;  Not  -> "Not"   ;  If  -> "If"     ;  Add -> "(+)"
+      Sub    -> "(-)"     ;  Mul  -> "(*)"   ;  Exp -> "(^)"    ;  Div -> "(/)"
+      CLogWZ -> "CLogWZ"  ;  Log2 -> "Log2"  ;  Log -> "Log"    ;  Mod -> "Mod"
+      CLog2  -> "CLog2"   ;  FLog -> "FLog"  ;  GCD -> "GCD"    ;  LCM -> "LCM"
+      FLog2  -> "FLog2"   ;  CLog -> "CLog"  ;  Min -> "Min"    ;  Max -> "Max"
 
 -- | A generalized interface for signatures of a type level proof.
 data Signature a = Signature
@@ -261,6 +261,12 @@ instance FromType (Term Nat) where
       -> do ty0' <- fromType kt ty0
             ty1' <- fromType kt ty1
             return $ Op op `S` ty0' `S` ty1'
+    TyConApp tc [ty0, ty1, ty2]
+      | Just (op :: Nat ~> Nat ~> Nat ~> Nat) <- fromTyCon kt tc
+      -> do ty0' <- fromType kt ty0
+            ty1' <- fromType kt ty1
+            ty2' <- fromType kt ty2
+            return $ Op op `S` ty0' `S` ty1' `S` ty2'
     TyConApp tc tys
       | Just (op :: Bool ~> Nat ~> Nat ~> Nat) <- fromTyCon kt tc
       , [ty0, ty1, ty2] <- dropTKTypes tys
@@ -334,6 +340,11 @@ specializeTerm = \case
   Op LeC  `S` (Lit 1) `S` t -> Op NZero `S` specializeTerm t
   Op CLog `S` (Lit 2) `S` t -> Op CLog2 `S` specializeTerm t
   Op FLog `S` (Lit 2) `S` t -> Op FLog2 `S` specializeTerm t
+  Op CLogWZ `S` t0 `S` t1 `S` t2 ->
+    let a = Op CLog `S` t0 `S` t1
+        c = Op EqB `S` t1 `S` Lit 0
+        t = Op If `S` c `S` t2 `S` a
+     in specializeTerm t
   Op op `S` t -> Op op `S` specializeTerm t
   t0 `S` t1 -> specializeTerm t0 `S` specializeTerm t1
   x -> x
