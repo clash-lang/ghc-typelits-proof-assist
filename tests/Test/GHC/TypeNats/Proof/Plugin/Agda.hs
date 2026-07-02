@@ -191,3 +191,14 @@ T16 (suc n) 2≤n = >-nonZero (lemma (suc n) 2≤n)
       (⌈log₂⌉-mono-≤ (n≤1+n ((suc (suc n)))))
 /-}
 instance T16 n => QED (T16 n)
+
+instance
+  (n < m) => T17 n m
+class
+  ( n + 1 < m + 1
+  ) => T17 n m
+{-/ Proof (Agda): T17
+open import Data.Nat.Properties using (+-monoˡ-<)
+T17 n m cLTb = +-monoˡ-< 1 cLTb
+/-}
+instance T17 n m => QED (T17 n m)
