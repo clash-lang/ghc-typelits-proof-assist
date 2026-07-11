@@ -255,4 +255,4 @@ choice of the right proof to apply is ambiguous.
 
 ### GHC Requirements
 
-The plugin currently only supports GHC 9.10.
+The plugin currently supports GHC 9.10, GHC 9.12, and GHC 9.14.

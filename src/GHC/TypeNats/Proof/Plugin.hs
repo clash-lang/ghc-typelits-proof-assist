@@ -21,7 +21,11 @@ import GHC.TcPlugin.API
   ( TcPlugin(..), TcPluginM, TcPluginStage(..), TcPluginSolveResult(..)
   , EvTerm(..), Expr(..), EqRel(..), Role(..), Ct, TcGblEnv, PredType
   , Coercion, UniqFM, Id, Name, FastString, SDoc
+#if MIN_VERSION_ghc(9,14,0)
+  , data EqPred, data IrredPred
+#else
   , pattern EqPred, pattern IrredPred
+#endif
   , mkTcPlugin, tcLookupTyCon, tcLookupClass, mkNonCanonical
   , mkPluginUnivCo,  mkTyConApp, readTcRef, writeTcRef, getInstEnvs
   , ctLoc, ctOrigin, ctPred, ppr, unLoc, emptyUFM, listToUFM, evCast
@@ -47,6 +51,7 @@ import GHC.Driver.Plugins
 import GHC.Hs
   ( HsGroup(..), TyClGroup(..), TyClDecl(..), HsSigType(..), InstDecl(..)
   , ClsInstDecl(..), HsType(..), HsParsedModule(..), GhcRn, realSrcSpan
+  , hsGroupInstDecls
   )
 import GHC.Utils.GlobalVars (global)
 import GHC.Rename.Utils (warnUnusedLocalBinds)
@@ -68,6 +73,9 @@ import GHC.Types.Name
   , getSrcSpan, isTyConName
   )
 import GHC.Types.Name.Set (emptyFVs)
+#if MIN_VERSION_ghc(9,14,0)
+import GHC.Types.Name.Reader (unLocWithUserRdr)
+#endif
 import GHC.Types.SrcLoc (SrcSpan(..), noSrcSpan)
 import GHC.Types.Unique.FM
   (lookupUFM, addToUFM, nonDetEltsUFM, minusUFM)
@@ -175,7 +183,7 @@ checkProofComments ::
 checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
   knownTypes <- lookupKnownTypes
   ufm <- readTcRef gref >>= foldM checkedAdd emptyUFM . either id noShare
-  let fpcs = filteredProofComments ufm
+  let fpcs = filteredProofComments ufm $ hsGroupInstDecls hsGroup
   writeTcRef gref $ Right (knownTypes, fpcs)
   unused <- forM (noMatchingClassProofComments ufm fpcs)
     $ \ProofComment{..} -> newNameAt (mkVarOccFS pcName) pcLocation
@@ -194,7 +202,7 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
         $ n' :| [n]
       return ufm
 
-  filteredProofComments ufm = (`mapMaybe` hs_tyclds) $ \case
+  filteredProofComments ufm instds = (`mapMaybe` hs_tyclds) $ \case
     TyClGroup{..}
       | -- check that there is a matching class name
         [ClassDecl{..}] <- unLoc <$> group_tyclds
@@ -216,7 +224,7 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
             -- instance with the same name at this point, as otherwise
             -- the type checking phase may never be executed, keeping a
             -- missing instance potentially undetected
-            getFirst $ mconcat $ (<$> group_instds) $ (. unLoc) $ First . \case
+            getFirst $ mconcat $ (<$> instds) $ (. unLoc) $ First . \case
               ClsInstD{..}
                 | ClsInstDecl{..} <- cid_inst
                 , HsSig{..} <- unLoc cid_poly_ty
@@ -233,10 +241,16 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
       HsQualTy{..}     -> hasConstraintResult $ unLoc hst_body
       HsParTy _ ty     -> hasConstraintResult $ unLoc ty
       HsKindSig _ ty _ -> hasConstraintResult $ unLoc ty
+#if !MIN_VERSION_ghc(9,14,0)
       HsBangTy _ _ ty  -> hasConstraintResult $ unLoc ty
+#endif
       HsFunTy _ _ _ ty -> hasConstraintResult $ unLoc ty
       HsAppTy _ ty _   -> hasConstraintResult $ unLoc ty
+#if MIN_VERSION_ghc(9,14,0)
+      HsTyVar _ _ n    -> unLocWithUserRdr n == constraintKindTyConName
+#else
       HsTyVar _ _ n    -> unLoc n == constraintKindTyConName
+#endif
       _                -> False
 
     getInstName = \case
@@ -244,9 +258,15 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
       HsQualTy{..}     -> getInstName $ unLoc hst_body
       HsParTy _ ty     -> getInstName $ unLoc ty
       HsKindSig _ ty _ -> getInstName $ unLoc ty
+#if !MIN_VERSION_ghc(9,14,0)
       HsBangTy _ _ ty  -> getInstName $ unLoc ty
+#endif
       HsAppTy _ ty _   -> getInstName $ unLoc ty
+#if MIN_VERSION_ghc(9,14,0)
+      HsTyVar _ _ n    -> return $ getName $ unLocWithUserRdr n
+#else
       HsTyVar _ _ n    -> return $ getName $ unLoc n
+#endif
       _                -> Nothing
 
   noMatchingClassProofComments ufm fpcs =
