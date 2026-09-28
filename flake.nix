@@ -33,26 +33,23 @@
   }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        lib = import ./nix/lib.nix { inherit pkgs; };
+        pkgs0 = nixpkgs.legacyPackages.${system};
 
-        ghcVersions = [ "ghc9103" "ghc9124" "ghc9141"];
+        ghcVersions = [ "ghc9103" "ghc9124" "ghc9141" "ghc1001"];
         defaultGhcVersion = "ghc9103";
 
-        inherit (pkgs.haskell.lib) dontCheck;
+        inherit (pkgs0.haskell.lib) dontCheck doJailbreak;
 
-        makeOverlay = compilerVersion:
+        makeOverlay = compilerVersion: final: prev:
           let
-            hsPkgs = pkgs.haskell.packages.${compilerVersion};
-            ghcOverrideFile = ./. + "/nix/override-${compilerVersion}.nix";
-
-            ghcOverrides =
-              if builtins.pathExists ghcOverrideFile then
-                import ghcOverrideFile { inherit pkgs lib; }
+            ghcOverlayFile = ./. + "/nix/overlay-${compilerVersion}.nix";
+            ghcOverlay =
+              if builtins.pathExists ghcOverlayFile then
+                import ghcOverlayFile { pkgs = prev; }
               else
                 f: p: {};
 
-            pkgSrcOverrides = final: prev: {
+            pkgSrcOverlay = final: prev: {
               ghc-tcplugin-api = dontCheck (
                 prev.callCabal2nix "ghc-tcplugin-api"
                   ghc-tcplugin-api {}
@@ -65,27 +62,51 @@
                 prev.callCabal2nix "ghc-typelits-knownnat"
                   ghc-typelits-knownnat {}
               );
-              ghc-typelits-extra = dontCheck (
+              ghc-typelits-extra = doJailbreak ( dontCheck (
                 prev.callCabal2nix "ghc-typelits-extra"
                   ghc-typelits-extra {}
-              );
+              ));
 
               ghc-typelits-proof-assist =
                 prev.callCabal2nix "ghc-typelits-proof-assist"
                   ./. {};
             };
+
+            haskellOverlays =
+              prev.lib.composeManyExtensions [
+                pkgSrcOverlay
+                ghcOverlay
+              ];
           in
-            (hsPkgs.extend ghcOverrides).extend pkgSrcOverrides;
+            {
+              "hsPkgs-${compilerVersion}" =
+                if compilerVersion == "ghc1001" then
+                  let
+                    ghc100Packages = (prev.haskell.packages.ghc9141.override {
+                      ghc = import ./nix/ghc-10.0.nix { pkgs = prev; };
+                      buildHaskellPackages = ghc100Packages;
+                    }).extend haskellOverlays;
+                  in
+                    ghc100Packages
+                else
+                  prev.haskell.packages.${compilerVersion}.extend haskellOverlays;
+            };
 
         overlays = nixpkgs.lib.attrsets.genAttrs ghcVersions makeOverlay;
 
+        pkgs =
+          nixpkgs.legacyPackages.${system}.extend (
+            nixpkgs.lib.composeManyExtensions (
+              nixpkgs.lib.attrsets.attrValues overlays));
+
         makeDevShell = compilerVersion:
-          with overlays.${compilerVersion};
+          with pkgs."hsPkgs-${compilerVersion}";
           shellFor {
             name = {
               "ghc9103" = "GHC 9.10.3";
               "ghc9124" = "GHC 9.12.4";
               "ghc9141" = "GHC 9.14.1";
+              "ghc1001" = "GHC 10.0.1 alpha1";
             }."${compilerVersion}";
             packages = p: [
               # project packages
@@ -94,14 +115,10 @@
             nativeBuildInputs = [
               # Haskell dependencies
               cabal-install
-
-              # other dependencies
-              pkgs.coq
-              pkgs.rocqPackages.stdlib
             ];
           };
 
-        shells = pkgs.lib.attrsets.genAttrs ghcVersions makeDevShell;
+        shells = pkgs0.lib.attrsets.genAttrs ghcVersions makeDevShell;
       in {
         devShells = shells // { default = shells.${defaultGhcVersion}; };
       });

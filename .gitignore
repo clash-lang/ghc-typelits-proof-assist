@@ -3,6 +3,7 @@ dist
 dist-*
 cabal.project.local
 cabal.project.local~
+.ghc.environment.*
 
 # emacs
 tags

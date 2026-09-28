@@ -72,7 +72,7 @@ import GHC.Types.Name
   ( mkVarOccFS, getOccName, getOccFS, getName, occNameFS
   , getSrcSpan, isTyConName
   )
-import GHC.Types.Name.Set (emptyFVs)
+import GHC.Types.Name.Set (emptyNameSet)
 #if MIN_VERSION_ghc(9,14,0)
 import GHC.Types.Name.Reader (unLocWithUserRdr)
 #endif
@@ -162,7 +162,8 @@ plugin = defaultPlugin
                   return (kt, proofs)
             pluginSolve cfg kt proofs gs ws
       , tcPluginRewrite = const emptyUFM
-      , tcPluginStop = const $ return ()
+      , tcPluginPostTc = const $ return ()
+      , tcPluginShutdown = const $ return ()
       }
   }
  where
@@ -187,7 +188,7 @@ checkProofComments gref _ gblEnv hsGroup@HsGroup{..} = do
   writeTcRef gref $ Right (knownTypes, fpcs)
   unused <- forM (noMatchingClassProofComments ufm fpcs)
     $ \ProofComment{..} -> newNameAt (mkVarOccFS pcName) pcLocation
-  warnUnusedLocalBinds unused emptyFVs
+  warnUnusedLocalBinds unused emptyNameSet
   return (gblEnv, hsGroup)
  where
   checkedAdd ufm pc = case lookupUFM ufm (pcName pc) of
