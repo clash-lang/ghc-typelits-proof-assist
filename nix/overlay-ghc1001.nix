@@ -123,10 +123,16 @@ ghc914 // {
     { };
 
   # Waiting for upstream: https://github.com/sol/doctest/pull/493
-  doctest = fromFork "doctest" {
-    rev = "c38f60af631735927a6deca95bf1241991be9605";
-    hash = "sha256-Gbl5aMy4oLrZ40N+4aKo8O33DwhV4+FixGJjPCzBEgI=";
-  };
+  doctest = dontCheck
+    (prev.callCabal2nix "doctest"
+      (pkgs.fetchFromGitHub {
+        owner = "sol";
+        repo = "doctest";
+        rev = "c38f60af631735927a6deca95bf1241991be9605";
+        hash = "sha256-Gbl5aMy4oLrZ40N+4aKo8O33DwhV4+FixGJjPCzBEgI=";
+      })
+      { }
+    );
 
   # GHC 10.0 support pending upstream: https://github.com/martijnbastiaan/doctest-parallel
   doctest-parallel = prev.callCabal2nix "doctest-parallel"
@@ -167,10 +173,14 @@ ghc914 // {
   };
 
   # Waiting for upstream: https://github.com/nomeata/inspection-testing/pull/102
-  inspection-testing = fromFork "inspection-testing" {
-    rev = "b38452dda0cb13991bbe6749810fb18f0dbfbbda";
-    hash = "sha256-ZJkO9Oljw2W24xztPFkBIJOt9ZJJQekuKU4PZm5XaAM=";
-  };
+  inspection-testing = prev.callCabal2nix "inspection-testing"
+    (pkgs.fetchFromGitHub {
+      owner = "nomeata";
+      repo = "inspection-testing";
+      rev = "b38452dda0cb13991bbe6749810fb18f0dbfbbda";
+      hash = "sha256-ZJkO9Oljw2W24xztPFkBIJOt9ZJJQekuKU4PZm5XaAM=";
+    })
+    { };
 
   # Waiting for upstream: https://github.com/snoyberg/mono-traversable/pull/262
   mono-traversable = fromFork "mono-traversable" {
@@ -186,16 +196,24 @@ ghc914 // {
   };
 
   # Waiting for upstream: https://github.com/Bodigrim/tasty-inspection-testing/pull/12
-  tasty-inspection-testing = fromFork "tasty-inspection-testing" {
-    rev = "d618bc2bd368ed6e07c2077c20ec2001e2a984d7";
-    hash = "sha256-EVfmYJCFK1gOgz8fc1gpPmbzwkbNLuLfnWI2M+3POaM=";
-  };
+  tasty-inspection-testing = prev.callCabal2nix "tasty-inspection-testing"
+    (pkgs.fetchFromGitHub {
+      owner = "Bodigrim";
+      repo = "tasty-inspection-testing";
+      rev = "d618bc2bd368ed6e07c2077c20ec2001e2a984d7";
+      hash = "sha256-EVfmYJCFK1gOgz8fc1gpPmbzwkbNLuLfnWI2M+3POaM=";
+    })
+    { };
 
   # Waiting for upstream: https://github.com/haskell-compat/th-compat/pull/25
-  th-compat = fromFork "th-compat" {
-    rev = "85c922ef33ccba51e25945b3fad0f608857e8a74";
-    hash = "sha256-0GEhp1F/J0LXj4+YmR6gUkzxoK6egckSN1StPNe4W9c=";
-  };
+  th-compat = prev.callCabal2nix "th-compat"
+    (pkgs.fetchFromGitHub {
+      owner = "haskell-compat";
+      repo = "th-compat";
+      rev = "85c922ef33ccba51e25945b3fad0f608857e8a74";
+      hash = "sha256-0GEhp1F/J0LXj4+YmR6gUkzxoK6egckSN1StPNe4W9c=";
+    })
+    { };
 
   # Waiting for upstream: https://github.com/mgsloan/th-orphans/pull/43
   th-orphans = fromFork "th-orphans" {
