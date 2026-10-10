@@ -18,13 +18,77 @@
         "type": "github"
       }
     },
+    "ghc-tcplugin-api": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788278105,
+        "narHash": "sha256-/80k2IGYt/lFlFFlHh1UOluqZQw9XJZdE4h5oP13XiY=",
+        "owner": "sheaf",
+        "repo": "ghc-tcplugin-api",
+        "rev": "dfb818fe279d29fd4e7fbec027bbdf40ce8cc0ad",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sheaf",
+        "repo": "ghc-tcplugin-api",
+        "type": "github"
+      }
+    },
+    "ghc-typelits-extra": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790299104,
+        "narHash": "sha256-NzL8l0wlk1VXi/W0PTEBCG4WZtD+AAEa4IrYDcy3xN4=",
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-extra",
+        "rev": "ec4e9efd31c66c5f027cdb4322462194ef4a3bf0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-extra",
+        "type": "github"
+      }
+    },
+    "ghc-typelits-knownnat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789822692,
+        "narHash": "sha256-u+DE22GIu8RmD2do+K7n5OSV0LkveCaRPpZg+av/OFU=",
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-knownnat",
+        "rev": "4f041a82edad86e4a8ff8db057922bfe66a272a8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-knownnat",
+        "type": "github"
+      }
+    },
+    "ghc-typelits-natnormalise": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789819900,
+        "narHash": "sha256-lukJpgSYhnuPsrfK7khOO7af0xcqz+VSML3d24FkauM=",
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-natnormalise",
+        "rev": "44c1a880be312d73c175dda131a8f97ff0d22a75",
+        "type": "github"
+      },
+      "original": {
+        "owner": "clash-lang",
+        "repo": "ghc-typelits-natnormalise",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1770537093,
-        "narHash": "sha256-pF1quXG5wsgtyuPOHcLfYg/ft/QMr8NnX0i6tW2187s=",
+        "lastModified": 1787964612,
+        "narHash": "sha256-0N9nghg3nwzX6b6qc77EzjR9cu/Z+UR66FlfsCqiURs=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "fef9403a3e4d31b0a23f0bacebbec52c248fbb51",
+        "rev": "e8be7818e19ada32105a8af937a6a473b38167ca",
         "type": "github"
       },
       "original": {
@@ -37,6 +101,10 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "ghc-tcplugin-api": "ghc-tcplugin-api",
+        "ghc-typelits-extra": "ghc-typelits-extra",
+        "ghc-typelits-knownnat": "ghc-typelits-knownnat",
+        "ghc-typelits-natnormalise": "ghc-typelits-natnormalise",
         "nixpkgs": "nixpkgs"
       }
     },

@@ -16,7 +16,7 @@ import GHC.Driver.Plugins (CommandLineOption)
 pluginName :: IsString s => s
 pluginName = fromString $ g $ g $ show 'pluginName
  where
-  g = init . dropWhileEnd (/= '.')
+  g = dropWhileEnd (== '.') . dropWhileEnd (/= '.')
 
 autoProveFlag :: IsString s => s
 autoProveFlag = "AutoProve"
