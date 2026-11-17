@@ -8,10 +8,12 @@ import Data.Either (partitionEithers)
 import Data.String.Combinators
   ((<+>), parens, colon, punctuate, unwords)
 import Data.String (IsString(..))
+import GHC.Builtins (boolTy, naturalTy)
 import GHC.Data.FastString (unpackFS)
 import GHC.Plugins (getOccString)
+import GHC.Tc.Utils.TcType (eqType)
 import GHC.Types.Name (NamedThing(..))
-import GHC.Types.Var (TyVar)
+import GHC.Types.Var (TyVar, tyVarKind)
 import System.Directory (findExecutable, withCurrentDirectory)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>), (<.>))
@@ -81,14 +83,22 @@ instance (IsString s, Monoid s) => ProverConfig Agda s where
     t -> defPrintTerm p t
 
   printSignature p Signature{..} = unwords $
-    [ name, colon , parens (unwords $ vars <> [ colon, "ℕ" ]) ]
+    [ name, colon , unwords vars ]
     <> ((".{{_ : NonZero " <>) . (<> "}}") . fromString . getOccString <$> nzs)
     <> [ "→" ] <> ((<+> "→") . printTerm p <$> premise)
     <> punctuate " ∧" (printTerm p <$> sigConclusion)
    where
     (nzs, premise) = partitionEithers $ partNZVar <$> sigPremise
     name = fromString $ getOccString $ getName sigClass
-    vars = fromString . getOccString <$> sigVars
+    vars = prSigVar <$> sigVars
+
+    prSigVar x
+      | tyk `eqType` boolTy    = parens $ var <+> colon <+> "Bool"
+      | tyk `eqType` naturalTy = parens $ var <+> colon <+> "ℕ"
+      | otherwise              = var
+     where
+      tyk = tyVarKind x
+      var = fromString $ getOccString x
 
     partNZVar :: Term a -> Either TyVar (Term a)
     partNZVar = \case

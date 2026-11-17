@@ -7,7 +7,7 @@ import Prelude hiding (unwords)
 import Data.String.Combinators
   ((<+>), colon, comma, parens, punctuate, unwords)
 import Data.String (IsString(..))
-import GHC.Builtin.Types (boolTy, naturalTy)
+import GHC.Builtins (boolTy, naturalTy)
 import GHC.Data.FastString (unpackFS)
 import GHC.Plugins (getOccString)
 import GHC.Tc.Utils.TcType (eqType)

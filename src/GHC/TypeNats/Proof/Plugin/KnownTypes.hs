@@ -7,9 +7,8 @@ module GHC.TypeNats.Proof.Plugin.KnownTypes
   ) where
 
 import GHC.Base (Constraint, Type)
-import GHC.Builtin.Types (eqTyCon)
-import GHC.Builtin.Types.Literals
-  ( typeNatAddTyCon, typeNatSubTyCon, typeNatMulTyCon
+import GHC.Builtins
+  ( eqTyCon, typeNatAddTyCon, typeNatSubTyCon, typeNatMulTyCon
   , typeNatExpTyCon, typeNatDivTyCon, typeNatModTyCon, typeNatLogTyCon
   )
 import GHC.Core.TyCon (TyCon)
