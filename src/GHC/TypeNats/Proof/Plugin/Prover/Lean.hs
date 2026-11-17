@@ -3,10 +3,13 @@ module GHC.TypeNats.Proof.Plugin.Prover.Lean where
 import Prelude hiding (unwords)
 
 import Data.String (IsString (fromString))
-import Data.String.Combinators (unwords, (<+>), punctuate, parens)
+import Data.String.Combinators (unwords, (<+>), punctuate, parens, colon)
+import GHC.Builtins (boolTy, naturalTy)
 import GHC.Data.FastString (unpackFS)
 import GHC.Plugins (getOccString)
+import GHC.Tc.Utils.TcType (eqType)
 import GHC.Types.Name (NamedThing(..))
+import GHC.Types.Var (tyVarKind)
 import System.Directory (withCurrentDirectory, findExecutable)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>), (<.>))
@@ -63,12 +66,20 @@ instance (IsString s, Monoid s) => ProverConfig Lean s where
     t -> defPrintTerm p t
 
   printSignature p Signature{..} = unwords $
-    [ name <+> unwords [parens (v <+> ": Nat") | v <- vars], ":" ] <> assertion
+    [ name <+> unwords vars, ":" ] <> assertion
    where
     name       = fromString $ getOccString $ getName sigClass
-    vars       = fromString . getOccString <$> sigVars
     conclusion = unwords $ punctuate " ∧" $ printTerm p <$> sigConclusion
     assertion  = punctuate " →" $ (printTerm p <$> sigPremise) <> [conclusion]
+    vars       = prSigVar <$> sigVars
+
+    prSigVar x
+      | tyk `eqType` boolTy    = parens $ var <+> colon <+> "Bool"
+      | tyk `eqType` naturalTy = parens $ var <+> colon <+> "Nat"
+      | otherwise              = var :: s
+     where
+      tyk = tyVarKind x
+      var = fromString $ getOccString x
 
   verify p env preamble sig@Signature{..} proof = do
     let fileName = getOccString (getName sigClass) <.> "lean"

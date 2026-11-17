@@ -32,11 +32,16 @@ import GHC.TcPlugin.API
   , newWanted, classifyPredType, eqType
   )
 import GHC.TcPlugin.API.Internal (unsafeLiftTcM)
-import GHC.Builtin.Types
-  ( cTupleTyCon, cTupleDataCon, naturalTy, constraintKindTyConName
+#if MIN_VERSION_ghc(10,1,0)
+import GHC.Builtin.WiredIn.Types (constraintKindTyConName)
+#else
+import GHC.Builtin.Types (constraintKindTyConName )
+#endif
+import GHC.Builtins
+  ( cTupleTyCon, cTupleDataCon, naturalTy
   , promotedTrueDataCon, promotedFalseDataCon
+  , typeNatCmpTyCon
   )
-import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
 import GHC.Core.DataCon (dataConWrapId)
 import GHC.Core.Opt.Monad (getModule)
 import GHC.Core.TyCo.Rep (Type(..), TyLit(..))
@@ -83,7 +88,11 @@ import GHC.Unit.Types (GenModule(..))
 import GHC.Utils.Panic (sorryDoc)
 import GHC.Utils.Outputable ((<+>), ($$), quotes, vcat, nest)
 import Language.Haskell.Syntax.Decls (StandaloneKindSig(..))
+#if MIN_VERSION_ghc(10,1,0)
+import GHC.Unit.Module.Name (moduleNameSlashes)
+#else
 import Language.Haskell.Syntax.Module.Name (moduleNameSlashes)
+#endif
 import System.Directory (createDirectoryIfMissing)
 import System.Exit (exitFailure)
 import System.FilePath ((</>))
