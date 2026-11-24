@@ -5,6 +5,7 @@
 
 module Test.GHC.TypeNats.Proof.Plugin.Lean where
 
+import GHC.TypeNats (Nat)
 import GHC.TypeNats.Proof
 
 instance T0 n
@@ -210,3 +211,15 @@ class
       exact Nat.clog_pow 2 (n + 1) (hb := by decide)
 /-}
 instance T17 n => QED (T17 n)
+
+instance
+  ( a <= b, a <= c
+  ) => T18 (a :: Nat) b c x
+class
+  ( a <= If x b c
+  ) => T18 a b c x
+{-/ Proof (Lean): T18
+  intro _ _
+  cases x <;> assumption
+/-}
+instance T18 a b c x => QED (T18 a b c x)

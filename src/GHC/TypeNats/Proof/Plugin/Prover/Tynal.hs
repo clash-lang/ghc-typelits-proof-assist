@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 module GHC.TypeNats.Proof.Plugin.Prover.Tynal
   ( Tynal
@@ -24,9 +25,13 @@ import Data.List (find)
 import Data.Set (Set, empty, toAscList, insert)
 import Data.String (IsString(..))
 import GHC.Base (Constraint)
-import GHC.Builtin.Types
-  (promotedFalseDataCon, promotedTrueDataCon, cTupleTyCon, multMulTyCon)
-import GHC.Builtin.Types.Literals (typeNatCmpTyCon)
+#if MIN_VERSION_ghc(10,1,0)
+import GHC.Builtin.WiredIn.Types (multMulTyCon)
+#else
+import GHC.Builtin.Types (multMulTyCon)
+#endif
+import GHC.Builtins
+  (promotedFalseDataCon, promotedTrueDataCon, cTupleTyCon, typeNatCmpTyCon)
 import GHC.Core.Class (Class)
 import GHC.Core.InstEnv (ClsInst)
 import GHC.Core.TyCo.Rep (Type(..), TyLit(..), FunTyFlag(..), ForAllTyFlag(..))

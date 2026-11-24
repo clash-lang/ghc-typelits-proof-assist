@@ -5,6 +5,7 @@
 
 module Test.GHC.TypeNats.Proof.Plugin.Coq where
 
+import GHC.TypeNats (Nat)
 import GHC.TypeNats.Proof
 
 {-/ Preamble (Coq):
@@ -194,3 +195,17 @@ class
   apply (Nat.le_trans a b c H0 H1).
 /-}
 instance T14 a b c => QED (T14 a b c)
+
+instance
+  ( a <= b, a <= c
+  ) => T15 (a :: Nat) b c x
+class
+  ( a <= If x b c
+  ) => T15 a b c x
+{-/ Proof (Coq): T15
+  intros a b c x Hb Hc.
+  case x.
+  - apply Hb.
+  - apply Hc.
+/-}
+instance T15 a b c x => QED (T15 a b c x)

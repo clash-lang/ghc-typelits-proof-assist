@@ -5,6 +5,7 @@
 
 module Test.GHC.TypeNats.Proof.Plugin.Agda where
 
+import GHC.TypeNats (Nat)
 import GHC.TypeNats.Proof
 
 {-/ Preamble (Agda):
@@ -202,3 +203,15 @@ open import Data.Nat.Properties using (+-monoˡ-<)
 T17 n m cLTb = +-monoˡ-< 1 cLTb
 /-}
 instance T17 n m => QED (T17 n m)
+
+instance
+  ( a <= b, a <= c
+  ) => T18 (a :: Nat) b c x
+class
+  ( a <= If x b c
+  ) => T18 a b c x
+{-/ Proof (Agda): T18
+T18 a b c false _   a≤c = a≤c
+T18 a b c true  a≤b _   = a≤b
+/-}
+instance T18 a b c x => QED (T18 a b c x)
