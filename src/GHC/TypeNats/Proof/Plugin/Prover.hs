@@ -11,6 +11,7 @@ import GHC.Types.Unique (Uniquable(..))
 import GHC.TypeNats.Proof.Plugin.Prover.Agda
 import GHC.TypeNats.Proof.Plugin.Prover.Coq
 import GHC.TypeNats.Proof.Plugin.Prover.Lean
+import GHC.TypeNats.Proof.Plugin.Prover.SMT
 import GHC.TypeNats.Proof.Plugin.Prover.Tynal
 
 -- | Supported proof assistants.
@@ -18,6 +19,7 @@ data Prover
   = Coq  -- ^ <https://coq.inria.fr>
   | Agda -- ^ <https://github.com/agda/agda>
   | Lean -- ^ <https://lean-lang.org>
+  | SMT
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 -- | A dedicated 'ProverConfig' dictionary type.
@@ -29,6 +31,7 @@ hasConfig = \case
   Coq  -> HasCfg CoqConfig
   Agda -> HasCfg AgdaConfig
   Lean -> HasCfg LeanConfig
+  SMT  -> HasCfg SMTConfig
 
 instance Outputable Prover where
   ppr = ppr . mkFastString . show
