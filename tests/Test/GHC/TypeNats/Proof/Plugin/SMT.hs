@@ -8,7 +8,7 @@ module Test.GHC.TypeNats.Proof.Plugin.SMT where
 import GHC.TypeNats.Proof
 
 {-/ Preamble (SMT):
-(set-logic QF_LIA)
+(set-logic QF_NIA)
 /-}
 
 instance T0 n
@@ -62,3 +62,14 @@ class
 {-/ Proof (SMT): T5
 /-}
 instance T5 m n => QED (T5 m n)
+
+instance
+  ( 1 <= n
+  , 1 <= d
+  ) => T6 n d
+class
+  ( 1 <= (n + (d - 1)) `Div` d
+  ) => T6 n d
+{-/ Proof (SMT): T6
+/-}
+instance T6 n d => QED (T6 n d)

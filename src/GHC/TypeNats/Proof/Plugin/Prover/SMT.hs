@@ -98,16 +98,17 @@ instance (IsString s, Monoid s) => ProverConfig SMT s where
       ] <>
       [ ""
       , printSignature p sig
+      , "(check-sat)"
       ]
 
     -- Run the assertion in Z3
     findExecutable "z3" >>= \case
       Just smtSolver -> withCurrentDirectory env.dir $ do
-        (exitCode, output, _) <- readProcessWithExitCode smtSolver [fileName] ""
-        if exitCode == ExitSuccess then
-          return Nothing
-        else
-          return $ Just $ fromString output
+        (exitCode, out, err) <- readProcessWithExitCode smtSolver [fileName] ""
+        return $ case (exitCode, lines out) of
+          (ExitSuccess, "unsat" : _) -> Nothing
+          (ExitSuccess, "sat" : _) -> Just "The lemma is false (counterexample found)"
+          _ -> Just $ fromString (out <> err)
       Nothing -> return $ Just "Failure: z3 not present on the system."
    where
     fileName = getOccString (getName sigClass) <.> "smt2"
